@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Stock Locator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <section class="auth-shell" id="authShell">
+      <div class="auth-panel">
+        <p class="eyebrow">Stock Locator</p>
+        <h1 id="authTitle">Sign in</h1>
+        <p class="auth-copy" id="authHelp">Use your email and password to access your inventory.</p>
+
+        <form class="auth-form" id="authForm">
+          <label class="auth-name-field" id="authNameField">
+            <span>Name</span>
+            <input id="authName" autocomplete="name" placeholder="Your name" />
+          </label>
+          <label>
+            <span>Email</span>
+            <input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com" />
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="authPassword" type="password" autocomplete="current-password" required placeholder="At least 6 characters" />
+          </label>
+          <button class="primary-button full-button" id="authSubmit" type="submit">Sign In</button>
+        </form>
+
+        <div class="auth-actions">
+          <button class="secondary-button full-button" id="authSecondary" type="button">Create Account</button>
+          <button class="text-link" id="forgotPassword" type="button">Forgot password?</button>
+        </div>
+        <p class="auth-message" id="authMessage"></p>
+      </div>
+    </section>
+
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Inventory</p>
+          <h1>Stock Locator</h1>
+        </div>
+        <span class="count-pill" id="inventoryCount">0 items</span>
+      </header>
+
+      <div class="user-bar">
+        <span id="userEmail"></span>
+        <div class="user-actions">
+          <button class="secondary-button compact-button" id="resendVerification" type="button">Verify Email</button>
+          <button class="secondary-button compact-button" id="signOutButton" type="button">Sign Out</button>
+        </div>
+      </div>
+
+      <nav class="tabs" aria-label="Main sections">
+        <button class="tab-button active" type="button" data-tab="search">Search</button>
+        <button class="tab-button" type="button" data-tab="manage">Manage</button>
+      </nav>
+
+      <main>
+        <section class="tab-panel active" id="searchPanel">
+          <label class="field-label" for="searchInput">Find product</label>
+          <div class="search-box">
+            <input id="searchInput" type="search" placeholder="Name, department, color, size..." autocomplete="off" />
+            <button class="icon-button" id="clearSearch" type="button" aria-label="Clear search">x</button>
+            <button class="secondary-button compact-button" id="toggleAllProducts" type="button">See All</button>
+          </div>
+          <div class="search-filters">
+            <label>
+              <span>Location filter</span>
+              <select id="searchLocation"></select>
+            </label>
+          </div>
+
+          <div class="result-summary" id="resultSummary"></div>
+          <div class="result-list" id="searchResults"></div>
+        </section>
+
+        <section class="tab-panel" id="managePanel">
+          <div class="section-switch" aria-label="Manage section">
+            <button class="section-button active" type="button" data-section="products">Products</button>
+            <button class="section-button" type="button" data-section="locations">Locations</button>
+          </div>
+
+          <section class="manager-section active" id="productsManager">
+            <div class="manager-view active" id="productsListView">
+              <div class="list-header">
+                <h2>Products</h2>
+                <span id="productListCount"></span>
+              </div>
+              <button class="primary-button full-button" id="addProductButton" type="button">Add Product</button>
+              <label class="field-label" for="manageProductSearch">Find product to manage</label>
+              <div class="search-box manage-search">
+                <input id="manageProductSearch" type="search" placeholder="Name, department, color, size, location..." autocomplete="off" />
+                <button class="icon-button" id="clearManageProductSearch" type="button" aria-label="Clear product search">x</button>
+                <button class="secondary-button compact-button" id="toggleManageProducts" type="button">See All</button>
+              </div>
+              <div class="item-list" id="productList"></div>
+            </div>
+
+            <div class="manager-view" id="productDetailView">
+              <div class="detail-header">
+                <button class="secondary-button back-button" id="backToProducts" type="button">Back</button>
+                <div>
+                  <p class="eyebrow">Product</p>
+                  <h2 id="productDetailTitle">New Product</h2>
+                </div>
+              </div>
+
+              <form class="edit-form" id="productForm">
+                <input type="hidden" id="productId" />
+                <div class="form-grid">
+                  <label>
+                    <span>Name</span>
+                    <input id="productName" required placeholder="White T-Shirt" />
+                  </label>
+                  <label>
+                    <span>Department</span>
+                    <select id="productDepartment" required>
+                      <option value="Woman">Woman</option>
+                      <option value="Men's">Men's</option>
+                      <option value="Kids">Kids</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Color</span>
+                    <input id="productColor" placeholder="Optional" />
+                  </label>
+                  <label>
+                    <span>Size</span>
+                    <input id="productSize" placeholder="Optional" />
+                  </label>
+                  <label class="full-span">
+                    <span>Location</span>
+                    <select id="productLocation"></select>
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button class="secondary-button" id="resetProductForm" type="button">Clear</button>
+                  <button class="primary-button" type="submit">Save Product</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <section class="manager-section" id="locationsManager">
+            <div class="manager-view active" id="locationsListView">
+              <div class="list-header">
+                <h2>Locations</h2>
+                <span id="locationListCount"></span>
+              </div>
+              <button class="primary-button full-button" id="addLocationButton" type="button">Add Location</button>
+              <div class="item-list" id="locationList"></div>
+            </div>
+
+            <div class="manager-view" id="locationDetailView">
+              <div class="detail-header">
+                <button class="secondary-button back-button" id="backToLocations" type="button">Back</button>
+                <div>
+                  <p class="eyebrow">Location</p>
+                  <h2 id="locationDetailTitle">New Location</h2>
+                </div>
+              </div>
+
+              <form class="edit-form" id="locationForm">
+                <input type="hidden" id="locationId" />
+                <div class="form-grid">
+                  <label>
+                    <span>Area</span>
+                    <input id="locationArea" required placeholder="Back Room" />
+                  </label>
+                  <label>
+                    <span>Section</span>
+                    <input id="locationSection" required placeholder="Wall 1" />
+                  </label>
+                  <label>
+                    <span>Number</span>
+                    <input id="locationNumber" required placeholder="A12" />
+                  </label>
+                  <div class="full-span field-group">
+                    <span>Products in location</span>
+                    <div class="checkbox-list" id="locationProducts"></div>
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button class="secondary-button" id="resetLocationForm" type="button">Clear</button>
+                  <button class="primary-button" type="submit">Save Location</button>
+                </div>
+              </form>
+
+              <div class="list-header">
+                <h2>Products Here</h2>
+                <span id="locationDetailProductCount"></span>
+              </div>
+              <div class="item-list" id="locationDetailProducts"></div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
