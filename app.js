@@ -400,7 +400,7 @@ function escapeText(value) {
 
 function reportTitle(type, selectedLocation = null) {
   if (type === "locations") {
-    return selectedLocation ? `Products in ${locationLabel(selectedLocation)}` : "Locations with Products";
+    return selectedLocation ? locationLabel(selectedLocation) : "Locations with Products";
   }
   return "Products with Locations";
 }
@@ -483,6 +483,7 @@ function buildReportTable(type, selectedLocationId = "") {
 
 function reportDocument(type, selectedLocationId = "") {
   const selectedLocation = type === "locations" ? findLocation(selectedLocationId) : null;
+  const isIndividualLocationReport = Boolean(type === "locations" && selectedLocation);
   return `<!doctype html>
     <html>
       <head>
@@ -501,7 +502,7 @@ function reportDocument(type, selectedLocationId = "") {
       </head>
       <body>
         <h1>${escapeText(reportTitle(type, selectedLocation))}</h1>
-        <div class="meta">Generated ${escapeText(reportDateLabel())}</div>
+        ${isIndividualLocationReport ? "" : `<div class="meta">Generated ${escapeText(reportDateLabel())}</div>`}
         ${buildReportTable(type, selectedLocationId)}
       </body>
     </html>`;
