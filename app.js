@@ -63,8 +63,11 @@ const els = {
   tabButtons: document.querySelectorAll(".tab-button"),
   searchPanel: document.querySelector("#searchPanel"),
   managePanel: document.querySelector("#managePanel"),
+  exportPanel: document.querySelector("#exportPanel"),
   searchInput: document.querySelector("#searchInput"),
-  searchLocation: document.querySelector("#searchLocation"),
+  searchArea: document.querySelector("#searchArea"),
+  searchSection: document.querySelector("#searchSection"),
+  searchNumber: document.querySelector("#searchNumber"),
   clearSearch: document.querySelector("#clearSearch"),
   toggleAllProducts: document.querySelector("#toggleAllProducts"),
   resultSummary: document.querySelector("#resultSummary"),
@@ -72,6 +75,7 @@ const els = {
   sectionButtons: document.querySelectorAll(".section-button"),
   productsManager: document.querySelector("#productsManager"),
   locationsManager: document.querySelector("#locationsManager"),
+  reportCount: document.querySelector("#reportCount"),
   productForm: document.querySelector("#productForm"),
   productId: document.querySelector("#productId"),
   productName: document.querySelector("#productName"),
@@ -323,6 +327,24 @@ function productDescriptor(product) {
   return [product.department, product.color, product.size].filter(Boolean).join(" / ");
 }
 
+function reportDateLabel() {
+  return new Date().toLocaleString([], {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function sortedProducts() {
+  return state.products.slice().sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function sortedLocations() {
+  return state.locations.slice().sort((a, b) => locationLabel(a).localeCompare(locationLabel(b)));
+}
+
 function productMatchesTerm(product, term) {
   if (!term) {
     return true;
@@ -353,6 +375,130 @@ function escapeText(value) {
     };
     return entities[char];
   });
+}
+
+function reportTitle(type) {
+  return type === "locations" ? "Locations with Products" : "Products with Locations";
+}
+
+function reportFileName(type, extension) {
+  const date = new Date().toISOString().slice(0, 10);
+  return `${type === "locations" ? "locations-with-products" : "products-with-locations"}-${date}.${extension}`;
+}
+
+function productReportRows() {
+  return sortedProducts().map((product) => {
+    const location = findLocation(product.locationId);
+    return {
+      Product: product.name,
+      Department: product.department,
+      Color: product.color || "",
+      Size: product.size || "",
+      Area: location ? location.area : "",
+      Section: location ? location.section : "",
+      Number: location ? location.number : "",
+      Location: locationLabel(location),
+    };
+  });
+}
+
+function locationReportRows() {
+  return sortedLocations().map((location) => {
+    const products = sortedProducts().filter((product) => product.locationId === location.id);
+    return {
+      Area: location.area,
+      Section: location.section,
+      Number: location.number,
+      Location: locationLabel(location),
+      Products: products.map((product) => product.name).join(", "),
+      Count: products.length,
+    };
+  });
+}
+
+function reportRows(type) {
+  return type === "locations" ? locationReportRows() : productReportRows();
+}
+
+function reportHeaders(type) {
+  return type === "locations"
+    ? ["Area", "Section", "Number", "Location", "Products", "Count"]
+    : ["Product", "Department", "Color", "Size", "Area", "Section", "Number", "Location"];
+}
+
+function buildReportTable(type) {
+  const headers = reportHeaders(type);
+  const rows = reportRows(type);
+
+  if (!rows.length) {
+    return '<p class="empty">No data to report.</p>';
+  }
+
+  return `
+    <table>
+      <thead>
+        <tr>${headers.map((header) => `<th>${escapeText(header)}</th>`).join("")}</tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map((row) => `<tr>${headers.map((header) => `<td>${escapeText(row[header])}</td>`).join("")}</tr>`)
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function reportDocument(type) {
+  return `<!doctype html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <title>${escapeText(reportTitle(type))}</title>
+        <style>
+          body { color: #1e2522; font-family: Arial, sans-serif; margin: 28px; }
+          h1 { font-size: 24px; margin: 0 0 6px; }
+          .meta { color: #62706b; font-size: 12px; margin-bottom: 18px; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #dce4df; font-size: 12px; padding: 8px; text-align: left; vertical-align: top; }
+          th { background: #eef5f3; }
+          .empty { border: 1px solid #dce4df; padding: 14px; }
+          @media print { button { display: none; } body { margin: 18px; } }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeText(reportTitle(type))}</h1>
+        <div class="meta">Generated ${escapeText(reportDateLabel())}</div>
+        ${buildReportTable(type)}
+      </body>
+    </html>`;
+}
+
+function printReport(type) {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    alert("Allow pop-ups to print this report.");
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(reportDocument(type));
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 250);
+}
+
+function exportReport(type) {
+  const blob = new Blob([reportDocument(type)], {
+    type: "application/vnd.ms-excel;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = reportFileName(type, "xls");
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function syncLocationProductGroups() {
@@ -400,19 +546,40 @@ function renderLocationOptions(selectedId = "") {
   els.productLocation.innerHTML = options.join("");
 }
 
-function renderSearchLocationOptions(selectedId = "") {
-  const options = ['<option value="">All locations</option>'];
-  state.locations
-    .slice()
-    .sort((a, b) => locationLabel(a).localeCompare(locationLabel(b)))
-    .forEach((location) => {
-      options.push(
-        `<option value="${escapeText(location.id)}"${location.id === selectedId ? " selected" : ""}>${escapeText(
-          locationLabel(location),
-        )}</option>`,
-      );
-    });
-  els.searchLocation.innerHTML = options.join("");
+function uniqueSorted(values) {
+  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+function optionList(defaultLabel, values, selectedValue) {
+  return [`<option value="">${escapeText(defaultLabel)}</option>`]
+    .concat(
+      values.map(
+        (value) => `<option value="${escapeText(value)}"${value === selectedValue ? " selected" : ""}>${escapeText(value)}</option>`,
+      ),
+    )
+    .join("");
+}
+
+function renderSearchLocationFilters(selectedArea = "", selectedSection = "", selectedNumber = "") {
+  const areas = uniqueSorted(state.locations.map((location) => location.area));
+  const area = areas.includes(selectedArea) ? selectedArea : "";
+  const sections = uniqueSorted(
+    state.locations
+      .filter((location) => !area || location.area === area)
+      .map((location) => location.section),
+  );
+  const section = sections.includes(selectedSection) ? selectedSection : "";
+  const numbers = uniqueSorted(
+    state.locations
+      .filter((location) => !area || location.area === area)
+      .filter((location) => !section || location.section === section)
+      .map((location) => location.number),
+  );
+  const number = numbers.includes(selectedNumber) ? selectedNumber : "";
+
+  els.searchArea.innerHTML = optionList("All areas", areas, area);
+  els.searchSection.innerHTML = optionList("All sections", sections, section);
+  els.searchNumber.innerHTML = optionList("All numbers", numbers, number);
 }
 
 function renderProductCheckboxes(selectedIds = []) {
@@ -439,30 +606,45 @@ function renderProductCheckboxes(selectedIds = []) {
 
 function renderSearchResults() {
   const term = normalize(els.searchInput.value);
-  const selectedLocationId = els.searchLocation.value;
+  const selectedArea = els.searchArea.value;
+  const selectedSection = els.searchSection.value;
+  const selectedNumber = els.searchNumber.value;
+  const hasLocationFilter = Boolean(selectedArea || selectedSection || selectedNumber);
 
   els.toggleAllProducts.textContent = isShowingAllSearchProducts ? "Hide All" : "See All";
 
-  if (!term && !selectedLocationId && !isShowingAllSearchProducts) {
+  if (!term && !hasLocationFilter && !isShowingAllSearchProducts) {
     els.resultSummary.textContent = "";
     els.searchResults.innerHTML = '<div class="empty-state">Search by product or choose a location.</div>';
     return;
   }
 
   const products = state.products.filter((product) => {
-    if (selectedLocationId && product.locationId !== selectedLocationId) {
-      return false;
+    if (hasLocationFilter) {
+      const location = findLocation(product.locationId);
+      if (!location) {
+        return false;
+      }
+      if (selectedArea && location.area !== selectedArea) {
+        return false;
+      }
+      if (selectedSection && location.section !== selectedSection) {
+        return false;
+      }
+      if (selectedNumber && location.number !== selectedNumber) {
+        return false;
+      }
     }
 
     return productMatchesTerm(product, term);
   });
 
-  const activeLocation = findLocation(selectedLocationId);
+  const activeLocationLabel = [selectedArea, selectedSection, selectedNumber].filter(Boolean).join(" / ");
   const baseSummary = `${products.length} match${products.length === 1 ? "" : "es"}`;
   els.resultSummary.textContent =
-    isShowingAllSearchProducts && !term && !selectedLocationId
+    isShowingAllSearchProducts && !term && !hasLocationFilter
       ? `Showing all ${products.length} product${products.length === 1 ? "" : "s"}`
-      : `${baseSummary}${activeLocation ? ` in ${locationLabel(activeLocation)}` : ""}`;
+      : `${baseSummary}${activeLocationLabel ? ` in ${activeLocationLabel}` : ""}`;
 
   if (!products.length) {
     els.searchResults.innerHTML = '<div class="empty-state">No products found.</div>';
@@ -577,8 +759,9 @@ function renderLocations() {
 
 function render() {
   els.inventoryCount.textContent = `${state.products.length} item${state.products.length === 1 ? "" : "s"}`;
+  els.reportCount.textContent = `${state.products.length} products / ${state.locations.length} locations`;
   renderLocationOptions(els.productLocation.value);
-  renderSearchLocationOptions(els.searchLocation.value);
+  renderSearchLocationFilters(els.searchArea.value, els.searchSection.value, els.searchNumber.value);
   renderProductCheckboxes(getSelectedLocationProductIds());
   renderSearchResults();
   renderProducts();
@@ -646,9 +829,24 @@ function resetLocationForm() {
 }
 
 function switchTab(tabName) {
+  if (tabName === "export" && isMobileView()) {
+    tabName = "search";
+  }
   els.tabButtons.forEach((button) => button.classList.toggle("active", button.dataset.tab === tabName));
   els.searchPanel.classList.toggle("active", tabName === "search");
   els.managePanel.classList.toggle("active", tabName === "manage");
+  els.exportPanel.classList.toggle("active", tabName === "export");
+}
+
+function isMobileView() {
+  return window.matchMedia("(max-width: 619px)").matches;
+}
+
+function keepDesktopOnlyTabsValid() {
+  const exportIsActive = els.exportPanel.classList.contains("active");
+  if (exportIsActive && isMobileView()) {
+    switchTab("search");
+  }
 }
 
 function switchManager(sectionName) {
@@ -890,6 +1088,7 @@ async function removeProductFromActiveLocation(id) {
 els.tabButtons.forEach((button) => {
   button.addEventListener("click", () => switchTab(button.dataset.tab));
 });
+window.addEventListener("resize", keepDesktopOnlyTabsValid);
 
 els.sectionButtons.forEach((button) => {
   button.addEventListener("click", () => switchManager(button.dataset.section));
@@ -899,7 +1098,17 @@ els.searchInput.addEventListener("input", () => {
   isShowingAllSearchProducts = false;
   renderSearchResults();
 });
-els.searchLocation.addEventListener("change", () => {
+els.searchArea.addEventListener("change", () => {
+  isShowingAllSearchProducts = false;
+  renderSearchLocationFilters(els.searchArea.value, "", "");
+  renderSearchResults();
+});
+els.searchSection.addEventListener("change", () => {
+  isShowingAllSearchProducts = false;
+  renderSearchLocationFilters(els.searchArea.value, els.searchSection.value, "");
+  renderSearchResults();
+});
+els.searchNumber.addEventListener("change", () => {
   isShowingAllSearchProducts = false;
   renderSearchResults();
 });
@@ -913,7 +1122,7 @@ els.toggleAllProducts.addEventListener("click", () => {
   isShowingAllSearchProducts = !isShowingAllSearchProducts;
   if (isShowingAllSearchProducts) {
     els.searchInput.value = "";
-    els.searchLocation.value = "";
+    renderSearchLocationFilters("", "", "");
   }
   renderSearchResults();
 });
@@ -958,14 +1167,22 @@ document.addEventListener("click", (event) => {
   const editLocationButton = event.target.closest("[data-edit-location]");
   const deleteLocationButton = event.target.closest("[data-delete-location]");
   const removeFromLocationButton = event.target.closest("[data-remove-from-location]");
+  const printReportButton = event.target.closest("[data-print-report]");
+  const exportReportButton = event.target.closest("[data-export-report]");
   const openLocationId = openLocationButton ? openLocationButton.dataset.openLocation : "";
   const editProductId = editProductButton ? editProductButton.dataset.editProduct : "";
   const deleteProductId = deleteProductButton ? deleteProductButton.dataset.deleteProduct : "";
   const editLocationId = editLocationButton ? editLocationButton.dataset.editLocation : "";
   const deleteLocationId = deleteLocationButton ? deleteLocationButton.dataset.deleteLocation : "";
   const removeFromLocationId = removeFromLocationButton ? removeFromLocationButton.dataset.removeFromLocation : "";
+  const printReportType = printReportButton ? printReportButton.dataset.printReport : "";
+  const exportReportType = exportReportButton ? exportReportButton.dataset.exportReport : "";
 
-  if (removeFromLocationId) {
+  if (printReportType) {
+    printReport(printReportType);
+  } else if (exportReportType) {
+    exportReport(exportReportType);
+  } else if (removeFromLocationId) {
     removeProductFromActiveLocation(removeFromLocationId);
   } else if (editProductId) {
     editProduct(editProductId);

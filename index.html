@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <section class="auth-shell" id="authShell">
+    <section class="auth-shell active" id="authShell">
       <div class="auth-panel">
         <p class="eyebrow">Stock Locator</p>
         <h1 id="authTitle">Sign in</h1>
@@ -57,6 +57,7 @@
       <nav class="tabs" aria-label="Main sections">
         <button class="tab-button active" type="button" data-tab="search">Search</button>
         <button class="tab-button" type="button" data-tab="manage">Manage</button>
+        <button class="tab-button" type="button" data-tab="export">Export</button>
       </nav>
 
       <main>
@@ -69,8 +70,16 @@
           </div>
           <div class="search-filters">
             <label>
-              <span>Location filter</span>
-              <select id="searchLocation"></select>
+              <span>Area</span>
+              <select id="searchArea"></select>
+            </label>
+            <label>
+              <span>Section</span>
+              <select id="searchSection"></select>
+            </label>
+            <label>
+              <span>Number</span>
+              <select id="searchNumber"></select>
             </label>
           </div>
 
@@ -197,6 +206,42 @@
               <div class="item-list" id="locationDetailProducts"></div>
             </div>
           </section>
+
+        </section>
+
+        <section class="tab-panel" id="exportPanel">
+          <div class="list-header">
+            <h2>Export / Print</h2>
+            <span id="reportCount"></span>
+          </div>
+
+          <div class="item-list">
+            <article class="item-card">
+              <div class="card-top">
+                <div>
+                  <div class="card-title">Products with Locations</div>
+                  <div class="meta-line">Every product with department, color, size, and location.</div>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="text-button" type="button" data-print-report="products">Print PDF</button>
+                <button class="secondary-button" type="button" data-export-report="products">Export Excel</button>
+              </div>
+            </article>
+
+            <article class="item-card">
+              <div class="card-top">
+                <div>
+                  <div class="card-title">Locations with Products</div>
+                  <div class="meta-line">Every area, section, and number with all products stored there.</div>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="text-button" type="button" data-print-report="locations">Print PDF</button>
+                <button class="secondary-button" type="button" data-export-report="locations">Export Excel</button>
+              </div>
+            </article>
+          </div>
         </section>
       </main>
     </div>

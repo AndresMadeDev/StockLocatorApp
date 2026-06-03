@@ -173,7 +173,7 @@ h2 {
 }
 
 .tabs {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -234,6 +234,8 @@ label span,
 }
 
 .search-filters {
+  display: grid;
+  gap: 10px;
   margin-top: 12px;
 }
 
@@ -491,7 +493,18 @@ select:focus {
     grid-template-columns: 1fr 1fr;
   }
 
+  .search-filters {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
   .full-span {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 619px) {
+  .tab-button[data-tab="export"],
+  #exportPanel {
+    display: none !important;
   }
 }
