@@ -424,32 +424,43 @@ function productReportRows() {
 }
 
 function locationReportRows(selectedLocationId = "") {
+  if (selectedLocationId) {
+    return sortedProducts()
+      .filter((product) => product.locationId === selectedLocationId)
+      .map((product) => ({
+        Name: product.name,
+        Color: product.color || "",
+      }));
+  }
+
   return sortedLocations()
     .filter((location) => !selectedLocationId || location.id === selectedLocationId)
     .map((location) => {
-    const products = sortedProducts().filter((product) => product.locationId === location.id);
-    return {
-      Area: location.area,
-      Section: location.section,
-      Number: location.number,
-      Location: locationLabel(location),
-      Products: products.map((product) => product.name).join(", "),
-    };
-  });
+      const products = sortedProducts().filter((product) => product.locationId === location.id);
+      return {
+        Area: location.area,
+        Section: location.section,
+        Number: location.number,
+        Location: locationLabel(location),
+        Products: products.map((product) => product.name).join(", "),
+      };
+    });
 }
 
 function reportRows(type, selectedLocationId = "") {
   return type === "locations" ? locationReportRows(selectedLocationId) : productReportRows();
 }
 
-function reportHeaders(type) {
-  return type === "locations"
+function reportHeaders(type, selectedLocationId = "") {
+  return type === "locations" && selectedLocationId
+    ? ["Name", "Color"]
+    : type === "locations"
     ? ["Area", "Section", "Number", "Location", "Products"]
     : ["Name", "Department", "Color", "Size", "Location"];
 }
 
 function buildReportTable(type, selectedLocationId = "") {
-  const headers = reportHeaders(type);
+  const headers = reportHeaders(type, selectedLocationId);
   const rows = reportRows(type, selectedLocationId);
 
   if (!rows.length) {
