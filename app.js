@@ -55,6 +55,7 @@ const els = {
   authSecondary: document.querySelector("#authSecondary"),
   forgotPassword: document.querySelector("#forgotPassword"),
   authMessage: document.querySelector("#authMessage"),
+  toast: document.querySelector("#toast"),
   appShell: document.querySelector(".app-shell"),
   userEmail: document.querySelector("#userEmail"),
   resendVerification: document.querySelector("#resendVerification"),
@@ -199,6 +200,17 @@ function setAuthMode(mode) {
 function showAuthMessage(message, isError = false) {
   els.authMessage.textContent = message;
   els.authMessage.classList.toggle("error", isError);
+}
+
+let toastTimer = null;
+
+function showToast(message) {
+  clearTimeout(toastTimer);
+  els.toast.textContent = message;
+  els.toast.classList.add("active");
+  toastTimer = setTimeout(() => {
+    els.toast.classList.remove("active");
+  }, 2400);
 }
 
 function friendlyAuthError(error) {
@@ -934,6 +946,7 @@ async function handleProductSubmit(event) {
   event.preventDefault();
   try {
     const id = els.productId.value || createId("product");
+    const isUpdate = Boolean(els.productId.value);
     const existingProduct = findProduct(id);
     const previousLocationId = existingProduct ? existingProduct.locationId : "";
     const product = {
@@ -958,6 +971,8 @@ async function handleProductSubmit(event) {
     els.productId.value = id;
     await setDoc(productDoc(id), productPayload(findProduct(id)));
     await Promise.all([...new Set([previousLocationId, els.productLocation.value].filter(Boolean))].map(persistLocation));
+    resetProductForm();
+    showToast(isUpdate ? "Product updated." : "Product saved.");
     render();
   } catch (error) {
     alert(`Could not save product: ${friendlyAuthError(error)}`);
@@ -968,6 +983,7 @@ async function handleLocationSubmit(event) {
   event.preventDefault();
   try {
     const id = els.locationId.value || createId("location");
+    const isUpdate = Boolean(els.locationId.value);
     const previousProductIds = state.products.filter((product) => product.locationId === id).map((product) => product.id);
     const location = {
       id,
@@ -991,6 +1007,8 @@ async function handleLocationSubmit(event) {
     const affectedProductIds = [...new Set([...previousProductIds, ...selectedProductIds])];
     await setDoc(locationDoc(id), locationPayload(findLocation(id)));
     await Promise.all(affectedProductIds.map((productId) => setDoc(productDoc(productId), productPayload(findProduct(productId)))));
+    resetLocationForm();
+    showToast(isUpdate ? "Location updated." : "Location saved.");
     render();
   } catch (error) {
     alert(`Could not save location: ${friendlyAuthError(error)}`);
@@ -1044,6 +1062,7 @@ async function deleteProduct(id) {
     els.productsListView.classList.add("active");
     els.productDetailView.classList.remove("active");
   }
+  showToast("Product deleted.");
   render();
 }
 
@@ -1068,6 +1087,7 @@ async function deleteLocation(id) {
   await deleteDoc(locationDoc(id));
   await Promise.all(affectedProductIds.map((productId) => setDoc(productDoc(productId), productPayload(findProduct(productId)))));
   resetLocationForm();
+  showToast("Location deleted.");
   render();
 }
 
@@ -1082,6 +1102,7 @@ async function removeProductFromActiveLocation(id) {
   await setDoc(productDoc(id), productPayload(product));
   await persistLocation(activeLocationDetailId);
   renderProductCheckboxes(getSelectedLocationProductIds().filter((productId) => productId !== id));
+  showToast("Product removed from location.");
   render();
 }
 

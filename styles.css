@@ -80,6 +80,31 @@ body {
   color: var(--danger);
 }
 
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 100;
+  transform: translate(-50%, 18px);
+  width: min(calc(100% - 32px), 360px);
+  border-radius: 8px;
+  background: var(--primary-dark);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  padding: 12px 14px;
+  text-align: center;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.toast.active {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 button,
 input,
 select {
