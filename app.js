@@ -66,9 +66,6 @@ const els = {
   managePanel: document.querySelector("#managePanel"),
   exportPanel: document.querySelector("#exportPanel"),
   searchInput: document.querySelector("#searchInput"),
-  searchArea: document.querySelector("#searchArea"),
-  searchSection: document.querySelector("#searchSection"),
-  searchNumber: document.querySelector("#searchNumber"),
   clearSearch: document.querySelector("#clearSearch"),
   toggleAllProducts: document.querySelector("#toggleAllProducts"),
   resultSummary: document.querySelector("#resultSummary"),
@@ -77,6 +74,7 @@ const els = {
   productsManager: document.querySelector("#productsManager"),
   locationsManager: document.querySelector("#locationsManager"),
   reportCount: document.querySelector("#reportCount"),
+  reportDepartment: document.querySelector("#reportDepartment"),
   reportLocation: document.querySelector("#reportLocation"),
   productForm: document.querySelector("#productForm"),
   productId: document.querySelector("#productId"),
@@ -118,6 +116,7 @@ function normalizeLoadedState(loadedState) {
   loadedState.products = loadedState.products.map((product) => ({
     ...product,
     department: DEPARTMENTS.includes(product.department) ? product.department : DEPARTMENTS[0],
+    color: formatColor(product.color),
     locationId: product.locationId || "",
   }));
   loadedState.locations = loadedState.locations.map((location) => ({
@@ -169,7 +168,7 @@ function productPayload(product) {
   return {
     name: product.name,
     department: product.department,
-    color: product.color || "",
+    color: formatColor(product.color),
     size: product.size || "",
     locationId: product.locationId || "",
   };
@@ -324,6 +323,13 @@ function normalize(value) {
   return value.trim().toLowerCase();
 }
 
+function formatColor(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (char) => char.toUpperCase());
+}
+
 function findProduct(id) {
   return state.products.find((product) => product.id === id);
 }
@@ -352,6 +358,24 @@ function reportDateLabel() {
 
 function sortedProducts() {
   return state.products.slice().sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function sortedReportProducts() {
+  return state.products.slice().sort((a, b) => {
+    const departmentCompare = (a.department || "").localeCompare(b.department || "");
+    if (departmentCompare) return departmentCompare;
+
+    const nameCompare = (a.name || "").localeCompare(b.name || "");
+    if (nameCompare) return nameCompare;
+
+    const colorCompare = (a.color || "").localeCompare(b.color || "");
+    if (colorCompare) return colorCompare;
+
+    const sizeCompare = (a.size || "").localeCompare(b.size || "", undefined, { numeric: true, sensitivity: "base" });
+    if (sizeCompare) return sizeCompare;
+
+    return locationLabel(findLocation(a.locationId)).localeCompare(locationLabel(findLocation(b.locationId)));
+  });
 }
 
 function sortedLocations() {
@@ -398,11 +422,11 @@ function escapeText(value) {
   });
 }
 
-function reportTitle(type, selectedLocation = null) {
+function reportTitle(type, selectedLocation = null, selectedDepartment = "") {
   if (type === "locations") {
     return selectedLocation ? locationLabel(selectedLocation) : "Locations with Products";
   }
-  return "Products with Locations";
+  return selectedDepartment ? `${selectedDepartment} Products with Locations` : "Products with Locations";
 }
 
 function reportFileName(type, extension) {
@@ -410,13 +434,15 @@ function reportFileName(type, extension) {
   return `${type === "locations" ? "locations-with-products" : "products-with-locations"}-${date}.${extension}`;
 }
 
-function productReportRows() {
-  return sortedProducts().map((product) => {
+function productReportRows(selectedDepartment = "") {
+  return sortedReportProducts()
+    .filter((product) => !selectedDepartment || product.department === selectedDepartment)
+    .map((product) => {
     const location = findLocation(product.locationId);
     return {
-      Name: product.name,
       Department: product.department,
-      Color: product.color || "",
+      Name: product.name,
+      Color: formatColor(product.color),
       Size: product.size || "",
       Location: locationLabel(location),
     };
@@ -429,7 +455,7 @@ function locationReportRows(selectedLocationId = "") {
       .filter((product) => product.locationId === selectedLocationId)
       .map((product) => ({
         Name: product.name,
-        Color: product.color || "",
+        Color: formatColor(product.color),
       }));
   }
 
@@ -447,8 +473,8 @@ function locationReportRows(selectedLocationId = "") {
     });
 }
 
-function reportRows(type, selectedLocationId = "") {
-  return type === "locations" ? locationReportRows(selectedLocationId) : productReportRows();
+function reportRows(type, selectedLocationId = "", selectedDepartment = "") {
+  return type === "locations" ? locationReportRows(selectedLocationId) : productReportRows(selectedDepartment);
 }
 
 function reportHeaders(type, selectedLocationId = "") {
@@ -456,12 +482,12 @@ function reportHeaders(type, selectedLocationId = "") {
     ? ["Name", "Color"]
     : type === "locations"
     ? ["Area", "Section", "Number", "Location", "Products"]
-    : ["Name", "Department", "Color", "Size", "Location"];
+    : ["Department", "Name", "Color", "Size", "Location"];
 }
 
-function buildReportTable(type, selectedLocationId = "") {
+function buildReportTable(type, selectedLocationId = "", selectedDepartment = "") {
   const headers = reportHeaders(type, selectedLocationId);
-  const rows = reportRows(type, selectedLocationId);
+  const rows = reportRows(type, selectedLocationId, selectedDepartment);
 
   if (!rows.length) {
     return '<p class="empty">No data to report.</p>';
@@ -481,14 +507,14 @@ function buildReportTable(type, selectedLocationId = "") {
   `;
 }
 
-function reportDocument(type, selectedLocationId = "") {
+function reportDocument(type, selectedLocationId = "", selectedDepartment = "") {
   const selectedLocation = type === "locations" ? findLocation(selectedLocationId) : null;
   const isIndividualLocationReport = Boolean(type === "locations" && selectedLocation);
   return `<!doctype html>
     <html>
       <head>
         <meta charset="UTF-8" />
-        <title>${escapeText(reportTitle(type, selectedLocation))}</title>
+        <title>${escapeText(reportTitle(type, selectedLocation, selectedDepartment))}</title>
         <style>
           body { color: #1e2522; font-family: Arial, sans-serif; margin: 28px; }
           h1 { font-size: 24px; margin: 0 0 6px; }
@@ -501,15 +527,16 @@ function reportDocument(type, selectedLocationId = "") {
         </style>
       </head>
       <body>
-        <h1>${escapeText(reportTitle(type, selectedLocation))}</h1>
+        <h1>${escapeText(reportTitle(type, selectedLocation, selectedDepartment))}</h1>
         ${isIndividualLocationReport ? "" : `<div class="meta">Generated ${escapeText(reportDateLabel())}</div>`}
-        ${buildReportTable(type, selectedLocationId)}
+        ${buildReportTable(type, selectedLocationId, selectedDepartment)}
       </body>
     </html>`;
 }
 
 function printReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
+  const selectedDepartment = type === "products" ? els.reportDepartment.value : "";
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
     alert("Allow pop-ups to print this report.");
@@ -517,7 +544,7 @@ function printReport(type) {
   }
 
   printWindow.document.open();
-  printWindow.document.write(reportDocument(type, selectedLocationId));
+  printWindow.document.write(reportDocument(type, selectedLocationId, selectedDepartment));
   printWindow.document.close();
   printWindow.focus();
   setTimeout(() => printWindow.print(), 250);
@@ -525,7 +552,8 @@ function printReport(type) {
 
 function exportReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
-  const blob = new Blob([reportDocument(type, selectedLocationId)], {
+  const selectedDepartment = type === "products" ? els.reportDepartment.value : "";
+  const blob = new Blob([reportDocument(type, selectedLocationId, selectedDepartment)], {
     type: "application/vnd.ms-excel;charset=utf-8",
   });
   const url = URL.createObjectURL(blob);
@@ -583,42 +611,6 @@ function renderLocationOptions(selectedId = "") {
   els.productLocation.innerHTML = options.join("");
 }
 
-function uniqueSorted(values) {
-  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
-}
-
-function optionList(defaultLabel, values, selectedValue) {
-  return [`<option value="">${escapeText(defaultLabel)}</option>`]
-    .concat(
-      values.map(
-        (value) => `<option value="${escapeText(value)}"${value === selectedValue ? " selected" : ""}>${escapeText(value)}</option>`,
-      ),
-    )
-    .join("");
-}
-
-function renderSearchLocationFilters(selectedArea = "", selectedSection = "", selectedNumber = "") {
-  const areas = uniqueSorted(state.locations.map((location) => location.area));
-  const area = areas.includes(selectedArea) ? selectedArea : "";
-  const sections = uniqueSorted(
-    state.locations
-      .filter((location) => !area || location.area === area)
-      .map((location) => location.section),
-  );
-  const section = sections.includes(selectedSection) ? selectedSection : "";
-  const numbers = uniqueSorted(
-    state.locations
-      .filter((location) => !area || location.area === area)
-      .filter((location) => !section || location.section === section)
-      .map((location) => location.number),
-  );
-  const number = numbers.includes(selectedNumber) ? selectedNumber : "";
-
-  els.searchArea.innerHTML = optionList("All areas", areas, area);
-  els.searchSection.innerHTML = optionList("All sections", sections, section);
-  els.searchNumber.innerHTML = optionList("All numbers", numbers, number);
-}
-
 function renderReportLocationOptions(selectedId = "") {
   const selectedLocationId = state.locations.some((location) => location.id === selectedId) ? selectedId : "";
   const options = ['<option value="">All locations</option>'];
@@ -656,45 +648,24 @@ function renderProductCheckboxes(selectedIds = []) {
 
 function renderSearchResults() {
   const term = normalize(els.searchInput.value);
-  const selectedArea = els.searchArea.value;
-  const selectedSection = els.searchSection.value;
-  const selectedNumber = els.searchNumber.value;
-  const hasLocationFilter = Boolean(selectedArea || selectedSection || selectedNumber);
 
   els.toggleAllProducts.textContent = isShowingAllSearchProducts ? "Hide All" : "See All";
 
-  if (!term && !hasLocationFilter && !isShowingAllSearchProducts) {
+  if (!term && !isShowingAllSearchProducts) {
     els.resultSummary.textContent = "";
-    els.searchResults.innerHTML = '<div class="empty-state">Search by product or choose a location.</div>';
+    els.searchResults.innerHTML = '<div class="empty-state">Search by product or tap See All.</div>';
     return;
   }
 
   const products = state.products.filter((product) => {
-    if (hasLocationFilter) {
-      const location = findLocation(product.locationId);
-      if (!location) {
-        return false;
-      }
-      if (selectedArea && location.area !== selectedArea) {
-        return false;
-      }
-      if (selectedSection && location.section !== selectedSection) {
-        return false;
-      }
-      if (selectedNumber && location.number !== selectedNumber) {
-        return false;
-      }
-    }
-
     return productMatchesTerm(product, term);
   });
 
-  const activeLocationLabel = [selectedArea, selectedSection, selectedNumber].filter(Boolean).join(" / ");
   const baseSummary = `${products.length} match${products.length === 1 ? "" : "es"}`;
   els.resultSummary.textContent =
-    isShowingAllSearchProducts && !term && !hasLocationFilter
+    isShowingAllSearchProducts && !term
       ? `Showing all ${products.length} product${products.length === 1 ? "" : "s"}`
-      : `${baseSummary}${activeLocationLabel ? ` in ${activeLocationLabel}` : ""}`;
+      : baseSummary;
 
   if (!products.length) {
     els.searchResults.innerHTML = '<div class="empty-state">No products found.</div>';
@@ -811,7 +782,6 @@ function render() {
   els.inventoryCount.textContent = `${state.products.length} item${state.products.length === 1 ? "" : "s"}`;
   els.reportCount.textContent = `${state.products.length} products / ${state.locations.length} locations`;
   renderLocationOptions(els.productLocation.value);
-  renderSearchLocationFilters(els.searchArea.value, els.searchSection.value, els.searchNumber.value);
   renderReportLocationOptions(els.reportLocation.value);
   renderProductCheckboxes(getSelectedLocationProductIds());
   renderSearchResults();
@@ -992,7 +962,7 @@ async function handleProductSubmit(event) {
       id,
       name: els.productName.value.trim(),
       department: els.productDepartment.value.trim(),
-      color: els.productColor.value.trim(),
+      color: formatColor(els.productColor.value),
       size: els.productSize.value.trim(),
       locationId: "",
     };
@@ -1068,7 +1038,7 @@ function editProduct(id) {
   els.productId.value = product.id;
   els.productName.value = product.name;
   els.productDepartment.value = DEPARTMENTS.includes(product.department) ? product.department : DEPARTMENTS[0];
-  els.productColor.value = product.color || "";
+  els.productColor.value = formatColor(product.color);
   els.productSize.value = product.size || "";
   renderLocationOptions(product.locationId);
   renderProductDetailTitle();
@@ -1158,20 +1128,6 @@ els.searchInput.addEventListener("input", () => {
   isShowingAllSearchProducts = false;
   renderSearchResults();
 });
-els.searchArea.addEventListener("change", () => {
-  isShowingAllSearchProducts = false;
-  renderSearchLocationFilters(els.searchArea.value, "", "");
-  renderSearchResults();
-});
-els.searchSection.addEventListener("change", () => {
-  isShowingAllSearchProducts = false;
-  renderSearchLocationFilters(els.searchArea.value, els.searchSection.value, "");
-  renderSearchResults();
-});
-els.searchNumber.addEventListener("change", () => {
-  isShowingAllSearchProducts = false;
-  renderSearchResults();
-});
 els.clearSearch.addEventListener("click", () => {
   els.searchInput.value = "";
   isShowingAllSearchProducts = false;
@@ -1182,7 +1138,6 @@ els.toggleAllProducts.addEventListener("click", () => {
   isShowingAllSearchProducts = !isShowingAllSearchProducts;
   if (isShowingAllSearchProducts) {
     els.searchInput.value = "";
-    renderSearchLocationFilters("", "", "");
   }
   renderSearchResults();
 });

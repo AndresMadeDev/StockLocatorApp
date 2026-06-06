@@ -70,21 +70,6 @@
             <button class="icon-button" id="clearSearch" type="button" aria-label="Clear search">x</button>
             <button class="secondary-button compact-button" id="toggleAllProducts" type="button">See All</button>
           </div>
-          <div class="search-filters">
-            <label>
-              <span>Area</span>
-              <select id="searchArea"></select>
-            </label>
-            <label>
-              <span>Section</span>
-              <select id="searchSection"></select>
-            </label>
-            <label>
-              <span>Number</span>
-              <select id="searchNumber"></select>
-            </label>
-          </div>
-
           <div class="result-summary" id="resultSummary"></div>
           <div class="result-list" id="searchResults"></div>
         </section>
@@ -225,6 +210,15 @@
                   <div class="meta-line">Every product with department, color, size, and location.</div>
                 </div>
               </div>
+              <label class="report-picker">
+                <span>Department to print</span>
+                <select id="reportDepartment">
+                  <option value="">All departments</option>
+                  <option value="Woman">Woman</option>
+                  <option value="Men's">Men's</option>
+                  <option value="Kids">Kids</option>
+                </select>
+              </label>
               <div class="card-actions">
                 <button class="text-button" type="button" data-print-report="products">Print PDF</button>
                 <button class="secondary-button" type="button" data-export-report="products">Export Excel</button>
