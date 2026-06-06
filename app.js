@@ -342,7 +342,7 @@ function locationLabel(location) {
 }
 
 function productDescriptor(product) {
-  return [product.department, product.color, product.size].filter(Boolean).join(" / ");
+  return [product.department, formatColor(product.color), product.size].filter(Boolean).join(" / ");
 }
 
 function reportDateLabel() {
