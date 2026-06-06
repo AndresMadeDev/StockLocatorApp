@@ -326,8 +326,7 @@ function normalize(value) {
 function formatColor(value) {
   return String(value || "")
     .trim()
-    .toLowerCase()
-    .replace(/\b[a-z]/g, (char) => char.toUpperCase());
+    .toUpperCase();
 }
 
 function findProduct(id) {
@@ -438,15 +437,15 @@ function productReportRows(selectedDepartment = "") {
   return sortedReportProducts()
     .filter((product) => !selectedDepartment || product.department === selectedDepartment)
     .map((product) => {
-    const location = findLocation(product.locationId);
-    return {
-      Department: product.department,
-      Name: product.name,
-      Color: formatColor(product.color),
-      Size: product.size || "",
-      Location: locationLabel(location),
-    };
-  });
+      const location = findLocation(product.locationId);
+      return {
+        Department: product.department,
+        Name: product.name,
+        Color: formatColor(product.color),
+        Size: product.size || "",
+        Location: locationLabel(location),
+      };
+    });
 }
 
 function locationReportRows(selectedLocationId = "") {
@@ -500,7 +499,12 @@ function buildReportTable(type, selectedLocationId = "", selectedDepartment = ""
       </thead>
       <tbody>
         ${rows
-          .map((row) => `<tr>${headers.map((header) => `<td>${escapeText(row[header])}</td>`).join("")}</tr>`)
+          .map(
+            (row) =>
+              `<tr>${headers
+                .map((header) => `<td class="${header === "Color" ? "color-cell" : ""}">${escapeText(row[header])}</td>`)
+                .join("")}</tr>`,
+          )
           .join("")}
       </tbody>
     </table>
@@ -522,6 +526,7 @@ function reportDocument(type, selectedLocationId = "", selectedDepartment = "") 
           table { border-collapse: collapse; width: 100%; }
           th, td { border: 1px solid #dce4df; font-size: 12px; padding: 8px; text-align: left; vertical-align: top; }
           th { background: #eef5f3; }
+          .color-cell { font-weight: 700; text-transform: uppercase; }
           .empty { border: 1px solid #dce4df; padding: 14px; }
           @media print { button { display: none; } body { margin: 18px; } }
         </style>
@@ -680,16 +685,12 @@ function renderSearchResults() {
         <article class="result-card">
           <div class="card-top">
             <div>
-              <div class="card-title">${escapeText(product.name)}</div>
-              <div class="meta-line">${escapeText(productDescriptor(product) || "No details")}</div>
+              <div class="search-product-title">${escapeText(product.name)}</div>
+              <div class="search-product-subtitle">${escapeText(product.department || "No department")}</div>
             </div>
             <span class="location-badge">${escapeText(locationLabel(location))}</span>
           </div>
-          <p class="location-line">${escapeText(
-            location
-              ? `Area: ${location.area} / Section: ${location.section} / Number: ${location.number}`
-              : "This product is not assigned to a location yet.",
-          )}</p>
+          <p class="location-line">${escapeText([formatColor(product.color), product.size].filter(Boolean).join(" / ") || "No color or size")}</p>
         </article>
       `;
     })
