@@ -951,6 +951,10 @@ function fillLocationForm(location) {
 function setLocationFormOpen(isOpen) {
   isLocationFormOpen = isOpen;
   const isExistingLocation = Boolean(activeLocationDetailId && findLocation(activeLocationDetailId));
+  els.locationForm.hidden = !isOpen;
+  els.editLocationButton.hidden = isOpen || !isExistingLocation;
+  els.addProductToLocationButton.hidden = isOpen || !isExistingLocation;
+  els.locationDetailProducts.hidden = isOpen;
   els.locationForm.classList.toggle("active", isOpen);
   els.editLocationButton.classList.toggle("hidden", isOpen || !isExistingLocation);
   els.addProductToLocationButton.classList.toggle("hidden", isOpen || !isExistingLocation);
@@ -1057,9 +1061,9 @@ function openLocationDetail(id) {
     return;
   }
 
+  activeLocationDetailId = id;
   switchTab("manage");
   switchManager("locations");
-  activeLocationDetailId = id;
   els.locationsListView.classList.remove("active");
   els.locationDetailView.classList.add("active");
   fillLocationForm(location);
@@ -1291,7 +1295,10 @@ els.resetProductForm.addEventListener("click", resetProductForm);
 els.resetLocationForm.addEventListener("click", resetLocationForm);
 els.addProductButton.addEventListener("click", openNewProduct);
 els.addProductToLocationButton.addEventListener("click", openNewProductForActiveLocation);
-els.editLocationButton.addEventListener("click", () => setLocationFormOpen(true));
+els.editLocationButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setLocationFormOpen(true);
+});
 els.closeLocationProductDialog.addEventListener("click", closeLocationProductDialog);
 els.cancelLocationProductDialog.addEventListener("click", closeLocationProductDialog);
 els.backToProducts.addEventListener("click", showProductList);
