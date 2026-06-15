@@ -82,7 +82,7 @@ const els = {
   productDepartment: document.querySelector("#productDepartment"),
   productColor: document.querySelector("#productColor"),
   productSize: document.querySelector("#productSize"),
-  productLocation: document.querySelector("#productLocation"),
+  productLocations: document.querySelector("#productLocations"),
   addProductButton: document.querySelector("#addProductButton"),
   backToProducts: document.querySelector("#backToProducts"),
   productsListView: document.querySelector("#productsListView"),
@@ -106,10 +106,18 @@ const els = {
   locationsListView: document.querySelector("#locationsListView"),
   locationDetailView: document.querySelector("#locationDetailView"),
   locationDetailTitle: document.querySelector("#locationDetailTitle"),
-  locationDetailProductCount: document.querySelector("#locationDetailProductCount"),
   locationDetailProducts: document.querySelector("#locationDetailProducts"),
   locationList: document.querySelector("#locationList"),
   locationListCount: document.querySelector("#locationListCount"),
+  locationProductDialog: document.querySelector("#locationProductDialog"),
+  locationProductForm: document.querySelector("#locationProductForm"),
+  locationProductDialogTitle: document.querySelector("#locationProductDialogTitle"),
+  locationProductName: document.querySelector("#locationProductName"),
+  locationProductDepartment: document.querySelector("#locationProductDepartment"),
+  locationProductColor: document.querySelector("#locationProductColor"),
+  locationProductSize: document.querySelector("#locationProductSize"),
+  closeLocationProductDialog: document.querySelector("#closeLocationProductDialog"),
+  cancelLocationProductDialog: document.querySelector("#cancelLocationProductDialog"),
 };
 
 function normalizeLoadedState(loadedState) {
@@ -117,7 +125,8 @@ function normalizeLoadedState(loadedState) {
     ...product,
     department: DEPARTMENTS.includes(product.department) ? product.department : DEPARTMENTS[0],
     color: formatColor(product.color),
-    locationId: product.locationId || "",
+    locationIds: uniqueIds([...(Array.isArray(product.locationIds) ? product.locationIds : []), product.locationId || ""]),
+    locationId: "",
   }));
   loadedState.locations = loadedState.locations.map((location) => ({
     ...location,
@@ -132,14 +141,17 @@ function normalizeLoadedState(loadedState) {
     location.productIds.forEach((productId) => {
       const product = loadedState.products.find((item) => item.id === productId);
       if (product) {
-        product.locationId = location.id;
+        product.locationIds = uniqueIds([...(product.locationIds || []), location.id]);
       }
     });
   });
   loadedState.locations.forEach((location) => {
     location.productIds = loadedState.products
-      .filter((product) => product.locationId === location.id)
+      .filter((product) => productHasLocation(product, location.id))
       .map((product) => product.id);
+  });
+  loadedState.products.forEach((product) => {
+    product.locationId = product.locationIds[0] || "";
   });
   return loadedState;
 }
@@ -165,12 +177,14 @@ function locationDoc(id) {
 }
 
 function productPayload(product) {
+  const locationIds = getProductLocationIds(product);
   return {
     name: product.name,
     department: product.department,
     color: formatColor(product.color),
     size: product.size || "",
-    locationId: product.locationId || "",
+    locationIds,
+    locationId: locationIds[0] || "",
   };
 }
 
@@ -337,8 +351,31 @@ function findLocation(id) {
   return state.locations.find((location) => location.id === id);
 }
 
+function uniqueIds(ids) {
+  return [...new Set(ids.filter(Boolean))];
+}
+
 function locationLabel(location) {
   return location ? [location.area, location.section, location.number].filter(Boolean).join(" ") : "No location";
+}
+
+function getProductLocationIds(product) {
+  return uniqueIds([...(Array.isArray(product.locationIds) ? product.locationIds : []), product.locationId || ""]);
+}
+
+function productHasLocation(product, locationId) {
+  return getProductLocationIds(product).includes(locationId);
+}
+
+function productLocations(product) {
+  return getProductLocationIds(product)
+    .map(findLocation)
+    .filter(Boolean);
+}
+
+function productLocationLabels(product) {
+  const labels = productLocations(product).map(locationLabel);
+  return labels.length ? labels.join(", ") : "No location";
 }
 
 function productDescriptor(product) {
@@ -373,7 +410,7 @@ function sortedReportProducts() {
     const sizeCompare = (a.size || "").localeCompare(b.size || "", undefined, { numeric: true, sensitivity: "base" });
     if (sizeCompare) return sizeCompare;
 
-    return locationLabel(findLocation(a.locationId)).localeCompare(locationLabel(findLocation(b.locationId)));
+    return productLocationLabels(a).localeCompare(productLocationLabels(b));
   });
 }
 
@@ -394,15 +431,13 @@ function productMatchesTerm(product, term) {
     return true;
   }
 
-  const location = findLocation(product.locationId);
+  const locations = productLocations(product);
   return [
     product.name,
     product.department,
     product.color,
     product.size,
-    location ? location.area : "",
-    location ? location.section : "",
-    location ? location.number : "",
+    ...locations.flatMap((location) => [location.area, location.section, location.number, locationLabel(location)]),
   ]
     .filter(Boolean)
     .some((value) => normalize(String(value)).includes(term));
@@ -437,13 +472,12 @@ function productReportRows(selectedDepartment = "") {
   return sortedReportProducts()
     .filter((product) => !selectedDepartment || product.department === selectedDepartment)
     .map((product) => {
-      const location = findLocation(product.locationId);
       return {
         Department: product.department,
         Name: product.name,
         Color: formatColor(product.color),
         Size: product.size || "",
-        Location: locationLabel(location),
+        Location: productLocationLabels(product),
       };
     });
 }
@@ -451,7 +485,7 @@ function productReportRows(selectedDepartment = "") {
 function locationReportRows(selectedLocationId = "") {
   if (selectedLocationId) {
     return sortedProducts()
-      .filter((product) => product.locationId === selectedLocationId)
+      .filter((product) => productHasLocation(product, selectedLocationId))
       .map((product) => ({
         Name: product.name,
         Color: formatColor(product.color),
@@ -461,7 +495,7 @@ function locationReportRows(selectedLocationId = "") {
   return sortedLocations()
     .filter((location) => !selectedLocationId || location.id === selectedLocationId)
     .map((location) => {
-      const products = sortedProducts().filter((product) => product.locationId === location.id);
+      const products = sortedProducts().filter((product) => productHasLocation(product, location.id));
       return {
         Area: location.area,
         Section: location.section,
@@ -573,47 +607,139 @@ function exportReport(type) {
 
 function syncLocationProductGroups() {
   state.locations.forEach((location) => {
-    location.productIds = state.products.filter((product) => product.locationId === location.id).map((product) => product.id);
+    location.productIds = state.products.filter((product) => productHasLocation(product, location.id)).map((product) => product.id);
+  });
+  state.products.forEach((product) => {
+    const locationIds = getProductLocationIds(product);
+    product.locationIds = locationIds;
+    product.locationId = locationIds[0] || "";
   });
 }
 
-function assignProductToLocation(productId, locationId) {
+function setProductLocations(productId, locationIds) {
   state.products.forEach((product) => {
     if (product.id === productId) {
-      product.locationId = locationId || "";
+      product.locationIds = uniqueIds(locationIds);
+      product.locationId = product.locationIds[0] || "";
     }
   });
   syncLocationProductGroups();
 }
 
-function assignProductsToLocation(locationId, productIds) {
-  state.products.forEach((product) => {
-    if (product.locationId === locationId && !productIds.includes(product.id)) {
-      product.locationId = "";
-    }
+function removeProductFromLocation(productId, locationId) {
+  const product = findProduct(productId);
+  if (!product || !locationId) {
+    return;
+  }
 
-    if (productIds.includes(product.id)) {
-      product.locationId = locationId;
-    }
-  });
-  syncLocationProductGroups();
+  setProductLocations(
+    productId,
+    getProductLocationIds(product).filter((id) => id !== locationId),
+  );
 }
 
-function renderLocationOptions(selectedId = "") {
-  const options = ['<option value="">No location assigned</option>'];
-  state.locations
-    .slice()
-    .sort((a, b) => locationLabel(a).localeCompare(locationLabel(b)))
-    .forEach((location) => {
+function getSelectedProductLocationIds() {
+  return Array.from(els.productLocations.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+}
+
+function renderLocationOptions(selectedIds = []) {
+  const selectedLocationIds = Array.isArray(selectedIds) ? selectedIds : selectedIds ? [selectedIds] : [];
+
+  if (!state.locations.length) {
+    els.productLocations.innerHTML = '<div class="empty-state">Add locations first.</div>';
+    return;
+  }
+
+  els.productLocations.innerHTML = sortedLocations()
+    .map((location) => {
       const count = location.productIds ? location.productIds.length : 0;
       const note = count ? ` - ${count} product${count === 1 ? "" : "s"}` : "";
-      options.push(
-        `<option value="${escapeText(location.id)}"${location.id === selectedId ? " selected" : ""}>${escapeText(
-          locationLabel(location) + note,
-        )}</option>`,
-      );
-    });
-  els.productLocation.innerHTML = options.join("");
+      return `
+        <label class="checkbox-row">
+          <input type="checkbox" value="${escapeText(location.id)}"${selectedLocationIds.includes(location.id) ? " checked" : ""} />
+          <span>${escapeText(locationLabel(location) + note)}</span>
+        </label>
+      `;
+    })
+    .join("");
+}
+
+function persistProductLocations(productId) {
+  const product = findProduct(productId);
+  if (!product) {
+    return Promise.resolve();
+  }
+
+  return setDoc(productDoc(productId), productPayload(product));
+}
+
+function persistLocations(ids) {
+  return Promise.all(uniqueIds(ids).map(persistLocation));
+}
+
+function persistProducts(ids) {
+  return Promise.all(uniqueIds(ids).map(persistProductLocations));
+}
+
+function affectedLocationIds(...groups) {
+  return uniqueIds(groups.flatMap((group) => (Array.isArray(group) ? group : [group])));
+}
+
+function closeLocationProductDialog() {
+  els.locationProductDialog.close();
+  els.locationProductForm.reset();
+}
+
+function openLocationProductDialog() {
+  const location = findLocation(activeLocationDetailId);
+  if (!location) {
+    showToast("Save the location first, then add products.");
+    return;
+  }
+
+  els.locationProductDialogTitle.textContent = `Add to ${locationLabel(location)}`;
+  els.locationProductForm.reset();
+  els.locationProductDialog.showModal();
+  els.locationProductName.focus();
+}
+
+function productModalPayload(id, locationId) {
+  return {
+    id,
+    name: els.locationProductName.value.trim(),
+    department: els.locationProductDepartment.value.trim(),
+    color: formatColor(els.locationProductColor.value),
+    size: els.locationProductSize.value.trim(),
+    locationIds: [locationId],
+    locationId,
+  };
+}
+
+async function handleLocationProductSubmit(event) {
+  event.preventDefault();
+  const location = findLocation(activeLocationDetailId);
+  if (!location) {
+    showToast("Save the location first, then add products.");
+    return;
+  }
+
+  try {
+    const id = createId("product");
+    const product = productModalPayload(id, location.id);
+    state.products.push(product);
+    syncLocationProductGroups();
+    await setDoc(productDoc(id), productPayload(product));
+    await persistLocation(location.id);
+    closeLocationProductDialog();
+    showToast("Product saved in location.");
+    render();
+  } catch (error) {
+    alert(`Could not save product: ${friendlyAuthError(error)}`);
+  }
+}
+
+function locationProducts(locationId) {
+  return sortedProducts().filter((product) => productHasLocation(product, locationId));
 }
 
 function renderReportLocationOptions(selectedId = "") {
@@ -658,7 +784,6 @@ function renderSearchResults() {
   els.searchResults.innerHTML = products
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((product) => {
-      const location = findLocation(product.locationId);
       return `
         <article class="result-card">
           <div class="card-top">
@@ -666,7 +791,7 @@ function renderSearchResults() {
               <div class="search-product-title">${escapeText(product.name)}</div>
               <div class="search-product-subtitle">${escapeText(product.department || "No department")}</div>
             </div>
-            <span class="location-badge">${escapeText(locationLabel(location))}</span>
+            <span class="location-badge">${escapeText(productLocationLabels(product))}</span>
           </div>
           <p class="location-line">${escapeText([formatColor(product.color), product.size].filter(Boolean).join(" / ") || "No color or size")}</p>
         </article>
@@ -703,7 +828,6 @@ function renderProducts() {
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((product) => {
-      const location = findLocation(product.locationId);
       return `
         <article class="item-card">
           <div class="card-top">
@@ -711,7 +835,7 @@ function renderProducts() {
               <div class="card-title">${escapeText(product.name)}</div>
               <div class="meta-line">${escapeText(productDescriptor(product) || "No optional details")}</div>
             </div>
-            <span class="location-badge">${escapeText(locationLabel(location))}</span>
+            <span class="location-badge">${escapeText(productLocationLabels(product))}</span>
           </div>
           <div class="card-actions">
             <button class="text-button" type="button" data-edit-product="${escapeText(product.id)}">Edit</button>
@@ -735,7 +859,8 @@ function renderLocations() {
     .slice()
     .sort((a, b) => locationLabel(a).localeCompare(locationLabel(b)))
     .map((location) => {
-      const products = state.products.filter((product) => product.locationId === location.id);
+      const products = locationProducts(location.id);
+      const productCount = products.length;
       return `
         <article class="item-card clickable-card" data-open-location="${escapeText(location.id)}">
           <div class="card-top">
@@ -745,7 +870,7 @@ function renderLocations() {
                 products.length ? products.map((product) => product.name).join(", ") : "Empty location",
               )}</div>
             </div>
-            <span class="location-badge">${products.length} product${products.length === 1 ? "" : "s"}</span>
+            <span class="location-badge">${productCount} product${productCount === 1 ? "" : "s"}</span>
           </div>
           <div class="card-actions">
             <button class="text-button" type="button" data-open-location="${escapeText(location.id)}">Open</button>
@@ -760,7 +885,7 @@ function renderLocations() {
 function render() {
   els.inventoryCount.textContent = `${state.products.length} item${state.products.length === 1 ? "" : "s"}`;
   els.reportCount.textContent = `${state.products.length} products / ${state.locations.length} locations`;
-  renderLocationOptions(els.productLocation.value);
+  renderLocationOptions(getSelectedProductLocationIds());
   renderReportLocationOptions(els.reportLocation.value);
   renderSearchResults();
   renderProducts();
@@ -776,11 +901,9 @@ function renderProductDetailTitle() {
 
 function renderLocationDetailProducts() {
   const location = findLocation(activeLocationDetailId);
-  const products = location ? state.products.filter((product) => product.locationId === location.id) : [];
+  const products = location ? locationProducts(location.id) : [];
 
   els.locationDetailTitle.textContent = location ? locationLabel(location) : "New Location";
-  els.locationDetailProductCount.textContent = `${products.length} total`;
-
   if (!products.length) {
     els.locationDetailProducts.innerHTML = '<div class="empty-state">No products in this location.</div>';
     return;
@@ -812,7 +935,7 @@ function resetProductForm() {
   els.productForm.reset();
   els.productId.value = "";
   activeProductDetailId = "";
-  renderLocationOptions();
+  renderLocationOptions([]);
   renderProductDetailTitle();
 }
 
@@ -872,19 +995,13 @@ function openNewProduct() {
   els.productDetailView.classList.add("active");
   els.productForm.reset();
   els.productId.value = "";
-  renderLocationOptions();
+  renderLocationOptions([]);
   renderProductDetailTitle();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function openNewProductForActiveLocation() {
-  if (!activeLocationDetailId || !findLocation(activeLocationDetailId)) {
-    showToast("Save the location first, then add products.");
-    return;
-  }
-
-  openNewProduct();
-  renderLocationOptions(activeLocationDetailId);
+  openLocationProductDialog();
 }
 
 function showLocationList() {
@@ -939,29 +1056,32 @@ async function handleProductSubmit(event) {
     const id = els.productId.value || createId("product");
     const isUpdate = Boolean(els.productId.value);
     const existingProduct = findProduct(id);
-    const previousLocationId = existingProduct ? existingProduct.locationId : "";
+    const previousLocationIds = existingProduct ? getProductLocationIds(existingProduct) : [];
+    const selectedLocationIds = getSelectedProductLocationIds();
     const product = {
       id,
       name: els.productName.value.trim(),
       department: els.productDepartment.value.trim(),
       color: formatColor(els.productColor.value),
       size: els.productSize.value.trim(),
+      locationIds: [],
       locationId: "",
     };
 
     const index = state.products.findIndex((item) => item.id === id);
     if (index >= 0) {
-      product.locationId = previousLocationId;
+      product.locationIds = previousLocationIds;
+      product.locationId = previousLocationIds[0] || "";
       state.products[index] = product;
     } else {
       state.products.push(product);
     }
 
-    assignProductToLocation(id, els.productLocation.value);
+    setProductLocations(id, selectedLocationIds);
     activeProductDetailId = id;
     els.productId.value = id;
     await setDoc(productDoc(id), productPayload(findProduct(id)));
-    await Promise.all([...new Set([previousLocationId, els.productLocation.value].filter(Boolean))].map(persistLocation));
+    await persistLocations(affectedLocationIds(previousLocationIds, selectedLocationIds));
     resetProductForm();
     showToast(isUpdate ? "Product updated." : "Product saved.");
     render();
@@ -975,7 +1095,7 @@ async function handleLocationSubmit(event) {
   try {
     const id = els.locationId.value || createId("location");
     const isUpdate = Boolean(els.locationId.value);
-    const previousProductIds = state.products.filter((product) => product.locationId === id).map((product) => product.id);
+    const previousProductIds = state.products.filter((product) => productHasLocation(product, id)).map((product) => product.id);
     const location = {
       id,
       area: els.locationArea.value.trim(),
@@ -991,13 +1111,11 @@ async function handleLocationSubmit(event) {
       state.locations.push(location);
     }
 
-    const selectedProductIds = previousProductIds;
-    assignProductsToLocation(id, selectedProductIds);
     activeLocationDetailId = id;
     els.locationId.value = id;
-    const affectedProductIds = [...new Set([...previousProductIds, ...selectedProductIds])];
+    syncLocationProductGroups();
     await setDoc(locationDoc(id), locationPayload(findLocation(id)));
-    await Promise.all(affectedProductIds.map((productId) => setDoc(productDoc(productId), productPayload(findProduct(productId)))));
+    await persistProducts(previousProductIds);
     resetLocationForm();
     showToast(isUpdate ? "Location updated." : "Location saved.");
     render();
@@ -1022,7 +1140,7 @@ function editProduct(id) {
   els.productDepartment.value = DEPARTMENTS.includes(product.department) ? product.department : DEPARTMENTS[0];
   els.productColor.value = formatColor(product.color);
   els.productSize.value = product.size || "";
-  renderLocationOptions(product.locationId);
+  renderLocationOptions(getProductLocationIds(product));
   renderProductDetailTitle();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1038,7 +1156,7 @@ async function deleteProduct(id) {
   }
 
   const wasViewingProduct = activeProductDetailId === id;
-  const previousLocationId = product.locationId;
+  const previousLocationIds = getProductLocationIds(product);
   state.products = state.products.filter((item) => item.id !== id);
   state.locations.forEach((location) => {
     if (location.productIds) {
@@ -1046,7 +1164,7 @@ async function deleteProduct(id) {
     }
   });
   await deleteDoc(productDoc(id));
-  await persistLocation(previousLocationId);
+  await persistLocations(previousLocationIds);
   resetProductForm();
   if (wasViewingProduct) {
     activeProductDetailId = "";
@@ -1063,11 +1181,12 @@ async function deleteLocation(id) {
     return;
   }
 
-  const affectedProductIds = state.products.filter((product) => product.locationId === id).map((product) => product.id);
+  const affectedProductIds = state.products.filter((product) => productHasLocation(product, id)).map((product) => product.id);
   state.locations = state.locations.filter((item) => item.id !== id);
   state.products.forEach((product) => {
-    if (product.locationId === id) {
-      product.locationId = "";
+    if (productHasLocation(product, id)) {
+      product.locationIds = getProductLocationIds(product).filter((locationId) => locationId !== id);
+      product.locationId = product.locationIds[0] || "";
     }
   });
   if (activeLocationDetailId === id) {
@@ -1088,7 +1207,7 @@ async function removeProductFromActiveLocation(id) {
     return;
   }
 
-  product.locationId = "";
+  removeProductFromLocation(id, activeLocationDetailId);
   syncLocationProductGroups();
   await setDoc(productDoc(id), productPayload(product));
   await persistLocation(activeLocationDetailId);
@@ -1142,10 +1261,13 @@ els.toggleManageProducts.addEventListener("click", () => {
 
 els.productForm.addEventListener("submit", handleProductSubmit);
 els.locationForm.addEventListener("submit", handleLocationSubmit);
+els.locationProductForm.addEventListener("submit", handleLocationProductSubmit);
 els.resetProductForm.addEventListener("click", resetProductForm);
 els.resetLocationForm.addEventListener("click", resetLocationForm);
 els.addProductButton.addEventListener("click", openNewProduct);
 els.addProductToLocationButton.addEventListener("click", openNewProductForActiveLocation);
+els.closeLocationProductDialog.addEventListener("click", closeLocationProductDialog);
+els.cancelLocationProductDialog.addEventListener("click", closeLocationProductDialog);
 els.backToProducts.addEventListener("click", showProductList);
 els.addLocationButton.addEventListener("click", openNewLocation);
 els.backToLocations.addEventListener("click", showLocationList);

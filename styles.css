@@ -285,7 +285,8 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(23, 107, 91, 0.14);
 }
 
-#productColor {
+#productColor,
+#locationProductColor {
   text-transform: uppercase;
 }
 
@@ -471,8 +472,10 @@ select:focus {
   color: #8e411c;
   font-size: 0.78rem;
   font-weight: 900;
+  line-height: 1.25;
+  max-width: 48%;
   padding: 6px 9px;
-  white-space: nowrap;
+  text-align: right;
 }
 
 .edit-form {
@@ -528,6 +531,26 @@ select:focus {
 
 .location-product-actions {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.product-modal {
+  width: min(94vw, 520px);
+  border: 0;
+  border-radius: 10px;
+  padding: 0;
+  background: transparent;
+}
+
+.product-modal::backdrop {
+  background: rgba(18, 28, 24, 0.44);
+}
+
+.modal-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 16px;
 }
 
 @media (min-width: 620px) {

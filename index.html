@@ -128,10 +128,10 @@
                     <span>Size</span>
                     <input id="productSize" placeholder="Optional" />
                   </label>
-                  <label class="full-span">
-                    <span>Location</span>
-                    <select id="productLocation"></select>
-                  </label>
+                  <div class="full-span field-group">
+                    <span>Locations</span>
+                    <div class="checkbox-list" id="productLocations"></div>
+                  </div>
                 </div>
                 <div class="form-actions">
                   <button class="secondary-button" id="resetProductForm" type="button">Clear</button>
@@ -182,10 +182,6 @@
                 </div>
               </form>
 
-              <div class="list-header">
-                <h2>Products Here</h2>
-                <span id="locationDetailProductCount"></span>
-              </div>
               <button class="primary-button full-button" id="addProductToLocationButton" type="button">Add Product Here</button>
               <div class="item-list" id="locationDetailProducts"></div>
             </div>
@@ -242,6 +238,44 @@
         </section>
       </main>
     </div>
+
+    <dialog class="product-modal" id="locationProductDialog">
+      <form class="modal-panel" id="locationProductForm">
+        <div class="detail-header">
+          <div>
+            <p class="eyebrow">New Product</p>
+            <h2 id="locationProductDialogTitle">Add Product Here</h2>
+          </div>
+          <button class="icon-button" id="closeLocationProductDialog" type="button" aria-label="Close">x</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Name</span>
+            <input id="locationProductName" required placeholder="White T-Shirt" />
+          </label>
+          <label>
+            <span>Department</span>
+            <select id="locationProductDepartment" required>
+              <option value="Woman">Woman</option>
+              <option value="Men's">Men's</option>
+              <option value="Kids">Kids</option>
+            </select>
+          </label>
+          <label>
+            <span>Color</span>
+            <input id="locationProductColor" placeholder="Optional" />
+          </label>
+          <label>
+            <span>Size</span>
+            <input id="locationProductSize" placeholder="Optional" />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="secondary-button" id="cancelLocationProductDialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Save Product</button>
+        </div>
+      </form>
+    </dialog>
 
     <script type="module" src="app.js"></script>
   </body>
