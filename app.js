@@ -41,6 +41,7 @@ let isShowingAllSearchProducts = false;
 let isShowingAllManageProducts = false;
 let activeProductDetailId = "";
 let activeLocationDetailId = "";
+let isLocationFormOpen = false;
 
 const els = {
   authShell: document.querySelector("#authShell"),
@@ -101,6 +102,7 @@ const els = {
   locationNumber: document.querySelector("#locationNumber"),
   resetLocationForm: document.querySelector("#resetLocationForm"),
   addLocationButton: document.querySelector("#addLocationButton"),
+  editLocationButton: document.querySelector("#editLocationButton"),
   addProductToLocationButton: document.querySelector("#addProductToLocationButton"),
   backToLocations: document.querySelector("#backToLocations"),
   locationsListView: document.querySelector("#locationsListView"),
@@ -939,11 +941,32 @@ function resetProductForm() {
   renderProductDetailTitle();
 }
 
+function fillLocationForm(location) {
+  els.locationId.value = location ? location.id : "";
+  els.locationArea.value = location ? location.area : "";
+  els.locationSection.value = location ? location.section || "" : "";
+  els.locationNumber.value = location ? location.number : "";
+}
+
+function setLocationFormOpen(isOpen) {
+  isLocationFormOpen = isOpen;
+  const isExistingLocation = Boolean(activeLocationDetailId && findLocation(activeLocationDetailId));
+  els.locationForm.classList.toggle("active", isOpen);
+  els.editLocationButton.classList.toggle("hidden", isOpen || !isExistingLocation);
+  els.addProductToLocationButton.classList.toggle("hidden", isOpen || !isExistingLocation);
+  els.locationDetailProducts.classList.toggle("hidden", isOpen);
+  els.resetLocationForm.textContent = isExistingLocation ? "Cancel" : "Back";
+}
+
 function resetLocationForm() {
-  els.locationForm.reset();
-  els.locationId.value = "";
-  activeLocationDetailId = "";
-  renderLocationDetailProducts();
+  const location = findLocation(activeLocationDetailId);
+  if (location) {
+    fillLocationForm(location);
+    setLocationFormOpen(false);
+    return;
+  }
+
+  showLocationList();
 }
 
 function switchTab(tabName) {
@@ -1006,9 +1029,12 @@ function openNewProductForActiveLocation() {
 
 function showLocationList() {
   activeLocationDetailId = "";
+  isLocationFormOpen = false;
   els.locationsListView.classList.add("active");
   els.locationDetailView.classList.remove("active");
-  resetLocationForm();
+  els.locationForm.reset();
+  els.locationId.value = "";
+  setLocationFormOpen(false);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -1020,6 +1046,7 @@ function openNewLocation() {
   els.locationDetailView.classList.add("active");
   els.locationForm.reset();
   els.locationId.value = "";
+  setLocationFormOpen(true);
   renderLocationDetailProducts();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1035,10 +1062,8 @@ function openLocationDetail(id) {
   activeLocationDetailId = id;
   els.locationsListView.classList.remove("active");
   els.locationDetailView.classList.add("active");
-  els.locationId.value = location.id;
-  els.locationArea.value = location.area;
-  els.locationSection.value = location.section || "";
-  els.locationNumber.value = location.number;
+  fillLocationForm(location);
+  setLocationFormOpen(false);
   renderLocationDetailProducts();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1266,6 +1291,7 @@ els.resetProductForm.addEventListener("click", resetProductForm);
 els.resetLocationForm.addEventListener("click", resetLocationForm);
 els.addProductButton.addEventListener("click", openNewProduct);
 els.addProductToLocationButton.addEventListener("click", openNewProductForActiveLocation);
+els.editLocationButton.addEventListener("click", () => setLocationFormOpen(true));
 els.closeLocationProductDialog.addEventListener("click", closeLocationProductDialog);
 els.cancelLocationProductDialog.addEventListener("click", closeLocationProductDialog);
 els.backToProducts.addEventListener("click", showProductList);

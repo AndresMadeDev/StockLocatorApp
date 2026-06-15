@@ -232,6 +232,10 @@ h2 {
   display: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .tab-panel.active,
 .manager-section.active,
 .manager-view.active {
@@ -481,6 +485,14 @@ select:focus {
 .edit-form {
   padding: 14px;
   margin-bottom: 18px;
+}
+
+#locationForm {
+  display: none;
+}
+
+#locationForm.active {
+  display: block;
 }
 
 .detail-header {
