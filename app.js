@@ -99,9 +99,9 @@ const els = {
   locationArea: document.querySelector("#locationArea"),
   locationSection: document.querySelector("#locationSection"),
   locationNumber: document.querySelector("#locationNumber"),
-  locationProducts: document.querySelector("#locationProducts"),
   resetLocationForm: document.querySelector("#resetLocationForm"),
   addLocationButton: document.querySelector("#addLocationButton"),
+  addProductToLocationButton: document.querySelector("#addProductToLocationButton"),
   backToLocations: document.querySelector("#backToLocations"),
   locationsListView: document.querySelector("#locationsListView"),
   locationDetailView: document.querySelector("#locationDetailView"),
@@ -629,28 +629,6 @@ function renderReportLocationOptions(selectedId = "") {
   els.reportLocation.innerHTML = options.join("");
 }
 
-function renderProductCheckboxes(selectedIds = []) {
-  if (!state.products.length) {
-    els.locationProducts.innerHTML = '<div class="empty-state">Add products first.</div>';
-    return;
-  }
-
-  els.locationProducts.innerHTML = state.products
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((product) => {
-      const location = findLocation(product.locationId);
-      const note = location ? ` - ${locationLabel(location)}` : "";
-      return `
-        <label class="checkbox-row">
-          <input type="checkbox" value="${escapeText(product.id)}"${selectedIds.includes(product.id) ? " checked" : ""} />
-          <span>${escapeText(product.name + note)}</span>
-        </label>
-      `;
-    })
-    .join("");
-}
-
 function renderSearchResults() {
   const term = normalize(els.searchInput.value);
 
@@ -784,7 +762,6 @@ function render() {
   els.reportCount.textContent = `${state.products.length} products / ${state.locations.length} locations`;
   renderLocationOptions(els.productLocation.value);
   renderReportLocationOptions(els.reportLocation.value);
-  renderProductCheckboxes(getSelectedLocationProductIds());
   renderSearchResults();
   renderProducts();
   renderLocations();
@@ -820,18 +797,15 @@ function renderLocationDetailProducts() {
               <div class="meta-line">${escapeText(productDescriptor(product) || "No optional details")}</div>
             </div>
           </div>
-          <div class="card-actions">
-            <button class="text-button" type="button" data-edit-product="${escapeText(product.id)}">Edit Product</button>
+          <div class="card-actions location-product-actions">
+            <button class="text-button" type="button" data-edit-product="${escapeText(product.id)}">Edit</button>
             <button class="danger-button" type="button" data-remove-from-location="${escapeText(product.id)}">Remove</button>
+            <button class="danger-button" type="button" data-delete-product="${escapeText(product.id)}">Delete</button>
           </div>
         </article>
       `,
     )
     .join("");
-}
-
-function getSelectedLocationProductIds() {
-  return Array.from(els.locationProducts.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
 }
 
 function resetProductForm() {
@@ -846,7 +820,6 @@ function resetLocationForm() {
   els.locationForm.reset();
   els.locationId.value = "";
   activeLocationDetailId = "";
-  renderProductCheckboxes();
   renderLocationDetailProducts();
 }
 
@@ -904,6 +877,16 @@ function openNewProduct() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function openNewProductForActiveLocation() {
+  if (!activeLocationDetailId || !findLocation(activeLocationDetailId)) {
+    showToast("Save the location first, then add products.");
+    return;
+  }
+
+  openNewProduct();
+  renderLocationOptions(activeLocationDetailId);
+}
+
 function showLocationList() {
   activeLocationDetailId = "";
   els.locationsListView.classList.add("active");
@@ -920,7 +903,6 @@ function openNewLocation() {
   els.locationDetailView.classList.add("active");
   els.locationForm.reset();
   els.locationId.value = "";
-  renderProductCheckboxes();
   renderLocationDetailProducts();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -940,7 +922,6 @@ function openLocationDetail(id) {
   els.locationArea.value = location.area;
   els.locationSection.value = location.section || "";
   els.locationNumber.value = location.number;
-  renderProductCheckboxes(location.productIds || []);
   renderLocationDetailProducts();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1010,7 +991,7 @@ async function handleLocationSubmit(event) {
       state.locations.push(location);
     }
 
-    const selectedProductIds = getSelectedLocationProductIds();
+    const selectedProductIds = previousProductIds;
     assignProductsToLocation(id, selectedProductIds);
     activeLocationDetailId = id;
     els.locationId.value = id;
@@ -1111,7 +1092,6 @@ async function removeProductFromActiveLocation(id) {
   syncLocationProductGroups();
   await setDoc(productDoc(id), productPayload(product));
   await persistLocation(activeLocationDetailId);
-  renderProductCheckboxes(getSelectedLocationProductIds().filter((productId) => productId !== id));
   showToast("Product removed from location.");
   render();
 }
@@ -1165,6 +1145,7 @@ els.locationForm.addEventListener("submit", handleLocationSubmit);
 els.resetProductForm.addEventListener("click", resetProductForm);
 els.resetLocationForm.addEventListener("click", resetLocationForm);
 els.addProductButton.addEventListener("click", openNewProduct);
+els.addProductToLocationButton.addEventListener("click", openNewProductForActiveLocation);
 els.backToProducts.addEventListener("click", showProductList);
 els.addLocationButton.addEventListener("click", openNewLocation);
 els.backToLocations.addEventListener("click", showLocationList);

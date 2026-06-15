@@ -526,6 +526,10 @@ select:focus {
   margin-top: 12px;
 }
 
+.location-product-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 @media (min-width: 620px) {
   .app-shell {
     padding-inline: 22px;
