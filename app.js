@@ -1061,9 +1061,9 @@ function openLocationDetail(id) {
     return;
   }
 
-  activeLocationDetailId = id;
   switchTab("manage");
   switchManager("locations");
+  activeLocationDetailId = id;
   els.locationsListView.classList.remove("active");
   els.locationDetailView.classList.add("active");
   fillLocationForm(location);
