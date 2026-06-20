@@ -924,15 +924,15 @@ function renderSearchResults() {
   els.searchResults.innerHTML = products
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((product) => {
+      const productDetails = [product.department || "No department", formatColor(product.color), product.size].filter(Boolean);
       return `
         <article class="result-card">
           <div class="card-top">
             <div>
               <div class="search-product-title product-name ${departmentClassName(product.department)}" style="${departmentStyle(product.department)}">${escapeText(product.name)}</div>
-              <div class="search-product-subtitle">${escapeText(product.department || "No department")}</div>
+              <div class="search-product-subtitle">${escapeText(productDetails.join(" / "))}</div>
             </div>
           </div>
-          <p class="location-line">${escapeText([formatColor(product.color), product.size].filter(Boolean).join(" / ") || "No color or size")}</p>
           <div class="search-location-text">${escapeText(productLocationLabels(product))}</div>
         </article>
       `;
