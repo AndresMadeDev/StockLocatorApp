@@ -459,28 +459,29 @@ select:focus {
 }
 
 .product-name {
-  border-left: 5px solid currentColor;
+  border-left: 5px solid var(--department-color, currentColor);
+  color: var(--department-color, inherit) !important;
   padding-left: 9px;
 }
 
 .department-woman {
-  color: #b0185b;
+  --department-color: #b0185b;
 }
 
 .department-mens {
-  color: #1f5fbf;
+  --department-color: #1f5fbf;
 }
 
 .department-kids {
-  color: #d56a00;
+  --department-color: #d56a00;
 }
 
 .department-toddler {
-  color: #7a3db8;
+  --department-color: #7a3db8;
 }
 
 .department-accessories {
-  color: #1f7a4d;
+  --department-color: #1f7a4d;
 }
 
 .search-product-title {

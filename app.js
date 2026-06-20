@@ -28,6 +28,13 @@ const firebaseConfig = {
 };
 
 const DEPARTMENTS = ["Woman", "Men's", "Kids", "Toddler", "Accessories / Apparel"];
+const DEPARTMENT_COLORS = {
+  Woman: "#b0185b",
+  "Men's": "#1f5fbf",
+  Kids: "#d56a00",
+  Toddler: "#7a3db8",
+  "Accessories / Apparel": "#1f7a4d",
+};
 const DEPARTMENT_CLASS_NAMES = {
   Woman: "department-woman",
   "Men's": "department-mens",
@@ -136,7 +143,7 @@ const els = {
 function normalizeLoadedState(loadedState) {
   loadedState.products = loadedState.products.map((product) => ({
     ...product,
-    department: DEPARTMENTS.includes(product.department) ? product.department : DEPARTMENTS[0],
+    department: normalizeDepartment(product.department),
     color: formatColor(product.color),
     locationIds: uniqueIds([...(Array.isArray(product.locationIds) ? product.locationIds : []), product.locationId || ""]),
     locationId: "",
@@ -395,8 +402,40 @@ function productDescriptor(product) {
   return [product.department, formatColor(product.color), product.size].filter(Boolean).join(" / ");
 }
 
+function normalizeDepartment(department) {
+  const value = String(department || "").trim();
+  const normalized = value.toLowerCase().replace(/&/g, "and").replace(/\s+/g, " ");
+
+  if (["woman", "women", "womens", "women's"].includes(normalized)) {
+    return "Woman";
+  }
+
+  if (["men", "mens", "men's"].includes(normalized)) {
+    return "Men's";
+  }
+
+  if (normalized === "kids" || normalized === "kid") {
+    return "Kids";
+  }
+
+  if (normalized === "toddler" || normalized === "toddlers") {
+    return "Toddler";
+  }
+
+  if (["accessories / apparel", "accessories/apparel", "accessories and apparel", "accessory", "accessories", "apparel"].includes(normalized)) {
+    return "Accessories / Apparel";
+  }
+
+  return DEPARTMENTS.includes(value) ? value : DEPARTMENTS[0];
+}
+
 function departmentClassName(department) {
-  return DEPARTMENT_CLASS_NAMES[department] || "";
+  return DEPARTMENT_CLASS_NAMES[normalizeDepartment(department)] || "";
+}
+
+function departmentStyle(department) {
+  const color = DEPARTMENT_COLORS[normalizeDepartment(department)] || DEPARTMENT_COLORS[DEPARTMENTS[0]];
+  return `--department-color: ${color};`;
 }
 
 function reportDateLabel() {
@@ -889,7 +928,7 @@ function renderSearchResults() {
         <article class="result-card">
           <div class="card-top">
             <div>
-              <div class="search-product-title product-name ${departmentClassName(product.department)}">${escapeText(product.name)}</div>
+              <div class="search-product-title product-name ${departmentClassName(product.department)}" style="${departmentStyle(product.department)}">${escapeText(product.name)}</div>
               <div class="search-product-subtitle">${escapeText(product.department || "No department")}</div>
             </div>
             <span class="location-badge">${escapeText(productLocationLabels(product))}</span>
@@ -933,7 +972,7 @@ function renderProducts() {
         <article class="item-card">
           <div class="card-top">
             <div>
-              <div class="card-title product-name ${departmentClassName(product.department)}">${escapeText(product.name)}</div>
+              <div class="card-title product-name ${departmentClassName(product.department)}" style="${departmentStyle(product.department)}">${escapeText(product.name)}</div>
               <div class="meta-line">${escapeText(productDescriptor(product) || "No optional details")}</div>
             </div>
             <span class="location-badge">${escapeText(productLocationLabels(product))}</span>
@@ -1030,7 +1069,7 @@ function renderLocationDetailProducts() {
         <article class="item-card">
           <div class="card-top">
             <div>
-              <div class="card-title product-name ${departmentClassName(product.department)}">${escapeText(product.name)}</div>
+              <div class="card-title product-name ${departmentClassName(product.department)}" style="${departmentStyle(product.department)}">${escapeText(product.name)}</div>
               <div class="meta-line">${escapeText(productDescriptor(product) || "No optional details")}</div>
             </div>
           </div>
