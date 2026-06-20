@@ -27,7 +27,14 @@ const firebaseConfig = {
   appId: "1:469986335052:web:928a2d718be8814c2757e9",
 };
 
-const DEPARTMENTS = ["Woman", "Men's", "Kids"];
+const DEPARTMENTS = ["Woman", "Men's", "Kids", "Toddler", "Accessories / Apparel"];
+const DEPARTMENT_CLASS_NAMES = {
+  Woman: "department-woman",
+  "Men's": "department-mens",
+  Kids: "department-kids",
+  Toddler: "department-toddler",
+  "Accessories / Apparel": "department-accessories",
+};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -386,6 +393,10 @@ function productLocationLabels(product) {
 
 function productDescriptor(product) {
   return [product.department, formatColor(product.color), product.size].filter(Boolean).join(" / ");
+}
+
+function departmentClassName(department) {
+  return DEPARTMENT_CLASS_NAMES[department] || "";
 }
 
 function reportDateLabel() {
@@ -878,7 +889,7 @@ function renderSearchResults() {
         <article class="result-card">
           <div class="card-top">
             <div>
-              <div class="search-product-title">${escapeText(product.name)}</div>
+              <div class="search-product-title product-name ${departmentClassName(product.department)}">${escapeText(product.name)}</div>
               <div class="search-product-subtitle">${escapeText(product.department || "No department")}</div>
             </div>
             <span class="location-badge">${escapeText(productLocationLabels(product))}</span>
@@ -922,7 +933,7 @@ function renderProducts() {
         <article class="item-card">
           <div class="card-top">
             <div>
-              <div class="card-title">${escapeText(product.name)}</div>
+              <div class="card-title product-name ${departmentClassName(product.department)}">${escapeText(product.name)}</div>
               <div class="meta-line">${escapeText(productDescriptor(product) || "No optional details")}</div>
             </div>
             <span class="location-badge">${escapeText(productLocationLabels(product))}</span>
@@ -1019,7 +1030,7 @@ function renderLocationDetailProducts() {
         <article class="item-card">
           <div class="card-top">
             <div>
-              <div class="card-title">${escapeText(product.name)}</div>
+              <div class="card-title product-name ${departmentClassName(product.department)}">${escapeText(product.name)}</div>
               <div class="meta-line">${escapeText(productDescriptor(product) || "No optional details")}</div>
             </div>
           </div>
