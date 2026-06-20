@@ -490,6 +490,16 @@ select:focus {
   line-height: 1.12;
 }
 
+.search-location-text {
+  align-self: flex-start;
+  color: var(--text);
+  font-size: 1.18rem;
+  font-weight: 900;
+  line-height: 1.12;
+  max-width: 48%;
+  text-align: right;
+}
+
 .search-product-subtitle {
   margin-top: 5px;
   color: var(--muted);
