@@ -433,6 +433,14 @@ select:focus {
   padding: 14px;
 }
 
+.result-card {
+  position: relative;
+}
+
+.result-card .card-top {
+  padding-right: 50%;
+}
+
 .clickable-card {
   cursor: pointer;
 }
@@ -491,10 +499,12 @@ select:focus {
 }
 
 .search-location-text {
-  align-self: flex-start;
   color: var(--text);
+  position: absolute;
+  right: 14px;
+  top: 14px;
   font-size: 1.18rem;
-  font-weight: 900;
+  font-weight: 500;
   line-height: 1.12;
   max-width: 48%;
   text-align: right;
@@ -639,5 +649,16 @@ select:focus {
   .tab-button[data-tab="export"],
   #exportPanel {
     display: none !important;
+  }
+
+  .result-card .card-top {
+    padding-right: 0;
+  }
+
+  .search-location-text {
+    position: static;
+    max-width: none;
+    margin-top: 10px;
+    text-align: left;
   }
 }
