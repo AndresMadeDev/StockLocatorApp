@@ -148,6 +148,27 @@
                 <span id="locationListCount"></span>
               </div>
               <button class="primary-button full-button" id="addLocationButton" type="button">Add Location</button>
+              <div class="location-controls">
+                <label>
+                  <span>Area</span>
+                  <select id="manageLocationAreaFilter"></select>
+                </label>
+                <label>
+                  <span>Section</span>
+                  <select id="manageLocationSectionFilter"></select>
+                </label>
+                <label>
+                  <span>Sort</span>
+                  <select id="manageLocationSort">
+                    <option value="area">Area, Section, Number</option>
+                    <option value="section">Section, Area, Number</option>
+                    <option value="number">Number</option>
+                    <option value="productsDesc">Most Products</option>
+                    <option value="productsAsc">Fewest Products</option>
+                  </select>
+                </label>
+                <button class="secondary-button" id="clearLocationFilters" type="button">Clear</button>
+              </div>
               <div class="item-list" id="locationList"></div>
             </div>
 

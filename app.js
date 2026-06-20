@@ -111,6 +111,10 @@ const els = {
   locationDetailProducts: document.querySelector("#locationDetailProducts"),
   locationList: document.querySelector("#locationList"),
   locationListCount: document.querySelector("#locationListCount"),
+  manageLocationAreaFilter: document.querySelector("#manageLocationAreaFilter"),
+  manageLocationSectionFilter: document.querySelector("#manageLocationSectionFilter"),
+  manageLocationSort: document.querySelector("#manageLocationSort"),
+  clearLocationFilters: document.querySelector("#clearLocationFilters"),
   locationProductDialog: document.querySelector("#locationProductDialog"),
   locationProductForm: document.querySelector("#locationProductForm"),
   locationProductDialogTitle: document.querySelector("#locationProductDialogTitle"),
@@ -426,6 +430,69 @@ function sortedLocations() {
 
     return (a.number || "").localeCompare(b.number || "", undefined, { numeric: true, sensitivity: "base" });
   });
+}
+
+function compareLocationNumber(a, b) {
+  return (a.number || "").localeCompare(b.number || "", undefined, { numeric: true, sensitivity: "base" });
+}
+
+function compareLocationArea(a, b) {
+  const areaCompare = (a.area || "").localeCompare(b.area || "");
+  if (areaCompare) return areaCompare;
+
+  const sectionCompare = (a.section || "").localeCompare(b.section || "");
+  if (sectionCompare) return sectionCompare;
+
+  return compareLocationNumber(a, b);
+}
+
+function compareLocationSection(a, b) {
+  const sectionCompare = (a.section || "").localeCompare(b.section || "");
+  if (sectionCompare) return sectionCompare;
+
+  const areaCompare = (a.area || "").localeCompare(b.area || "");
+  if (areaCompare) return areaCompare;
+
+  return compareLocationNumber(a, b);
+}
+
+function locationProductCount(location) {
+  return locationProducts(location.id).length;
+}
+
+function sortLocationsForManage(locations) {
+  const sortMode = els.manageLocationSort.value || "area";
+  return locations.slice().sort((a, b) => {
+    if (sortMode === "section") {
+      return compareLocationSection(a, b);
+    }
+
+    if (sortMode === "number") {
+      const numberCompare = compareLocationNumber(a, b);
+      return numberCompare || compareLocationArea(a, b);
+    }
+
+    if (sortMode === "productsDesc") {
+      return locationProductCount(b) - locationProductCount(a) || compareLocationArea(a, b);
+    }
+
+    if (sortMode === "productsAsc") {
+      return locationProductCount(a) - locationProductCount(b) || compareLocationArea(a, b);
+    }
+
+    return compareLocationArea(a, b);
+  });
+}
+
+function uniqueLocationValues(field, areaFilter = "") {
+  return [
+    ...new Set(
+      state.locations
+        .filter((location) => !areaFilter || location.area === areaFilter)
+        .map((location) => location[field])
+        .filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
 }
 
 function productMatchesTerm(product, term) {
@@ -757,6 +824,27 @@ function renderReportLocationOptions(selectedId = "") {
   els.reportLocation.innerHTML = options.join("");
 }
 
+function renderManageLocationFilters() {
+  const selectedArea = els.manageLocationAreaFilter.value;
+  const selectedSection = els.manageLocationSectionFilter.value;
+  const areas = uniqueLocationValues("area");
+  const sections = uniqueLocationValues("section", selectedArea);
+  const safeArea = areas.includes(selectedArea) ? selectedArea : "";
+  const safeSection = sections.includes(selectedSection) ? selectedSection : "";
+
+  els.manageLocationAreaFilter.innerHTML = [
+    '<option value="">All areas</option>',
+    ...areas.map((area) => `<option value="${escapeText(area)}"${area === safeArea ? " selected" : ""}>${escapeText(area)}</option>`),
+  ].join("");
+
+  els.manageLocationSectionFilter.innerHTML = [
+    '<option value="">All sections</option>',
+    ...sections.map(
+      (section) => `<option value="${escapeText(section)}"${section === safeSection ? " selected" : ""}>${escapeText(section)}</option>`,
+    ),
+  ].join("");
+}
+
 function renderSearchResults() {
   const term = normalize(els.searchInput.value);
 
@@ -850,16 +938,28 @@ function renderProducts() {
 }
 
 function renderLocations() {
-  els.locationListCount.textContent = `${state.locations.length} total`;
+  const areaFilter = els.manageLocationAreaFilter.value;
+  const sectionFilter = els.manageLocationSectionFilter.value;
+  const locations = sortLocationsForManage(
+    state.locations.filter((location) => {
+      return (!areaFilter || location.area === areaFilter) && (!sectionFilter || location.section === sectionFilter);
+    }),
+  );
+
+  els.locationListCount.textContent =
+    locations.length === state.locations.length ? `${state.locations.length} total` : `${locations.length} of ${state.locations.length}`;
 
   if (!state.locations.length) {
     els.locationList.innerHTML = '<div class="empty-state">Add your first location.</div>';
     return;
   }
 
-  els.locationList.innerHTML = state.locations
-    .slice()
-    .sort((a, b) => locationLabel(a).localeCompare(locationLabel(b)))
+  if (!locations.length) {
+    els.locationList.innerHTML = '<div class="empty-state">No locations match those filters.</div>';
+    return;
+  }
+
+  els.locationList.innerHTML = locations
     .map((location) => {
       const products = locationProducts(location.id);
       const productCount = products.length;
@@ -889,6 +989,7 @@ function render() {
   els.reportCount.textContent = `${state.products.length} products / ${state.locations.length} locations`;
   renderLocationOptions(getSelectedProductLocationIds());
   renderReportLocationOptions(els.reportLocation.value);
+  renderManageLocationFilters();
   renderSearchResults();
   renderProducts();
   renderLocations();
@@ -1298,6 +1399,19 @@ els.addProductToLocationButton.addEventListener("click", openNewProductForActive
 els.editLocationButton.addEventListener("click", (event) => {
   event.stopPropagation();
   setLocationFormOpen(true);
+});
+els.manageLocationAreaFilter.addEventListener("change", () => {
+  renderManageLocationFilters();
+  renderLocations();
+});
+els.manageLocationSectionFilter.addEventListener("change", renderLocations);
+els.manageLocationSort.addEventListener("change", renderLocations);
+els.clearLocationFilters.addEventListener("click", () => {
+  els.manageLocationAreaFilter.value = "";
+  els.manageLocationSectionFilter.value = "";
+  els.manageLocationSort.value = "area";
+  renderManageLocationFilters();
+  renderLocations();
 });
 els.closeLocationProductDialog.addEventListener("click", closeLocationProductDialog);
 els.cancelLocationProductDialog.addEventListener("click", closeLocationProductDialog);

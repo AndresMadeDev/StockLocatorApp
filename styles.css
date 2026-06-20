@@ -266,6 +266,17 @@ label span,
   margin-bottom: 12px;
 }
 
+.location-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.location-controls .secondary-button {
+  width: 100%;
+}
+
 .report-picker {
   display: block;
   margin: 12px 0;
@@ -572,6 +583,15 @@ select:focus {
 
   .form-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .location-controls {
+    grid-template-columns: 1fr 1fr 1fr auto;
+    align-items: end;
+  }
+
+  .location-controls .secondary-button {
+    padding-inline: 14px;
   }
 
   .full-span {
