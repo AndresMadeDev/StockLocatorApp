@@ -659,7 +659,7 @@ function productColorListHtml(products) {
           .map(
             (product) => `
               <tr>
-                <td>${escapeText([product.name, departmentAbbreviation(product.department)].filter(Boolean).join(" - "))}</td>
+                <td>${escapeText([departmentAbbreviation(product.department), product.name].filter(Boolean).join(" - "))}</td>
                 <td class="color-cell">${escapeText(formatColor(product.color))}</td>
               </tr>
             `,
