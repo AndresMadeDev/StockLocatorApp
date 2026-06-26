@@ -620,9 +620,32 @@ function locationReportRows(selectedLocationId = "") {
         Section: location.section,
         Number: location.number,
         Location: locationLabel(location),
-        Products: products.map((product) => product.name).join(", "),
+        Products: productColorListHtml(products),
       };
     });
+}
+
+function productColorListHtml(products) {
+  if (!products.length) {
+    return '<span class="muted">No products</span>';
+  }
+
+  return `
+    <table class="product-color-list">
+      <tbody>
+        ${products
+          .map(
+            (product) => `
+              <tr>
+                <td>${escapeText(product.name)}</td>
+                <td class="color-cell">${escapeText(formatColor(product.color))}</td>
+              </tr>
+            `,
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
 }
 
 function reportRows(type, selectedLocationId = "", selectedDepartment = "") {
@@ -655,7 +678,11 @@ function buildReportTable(type, selectedLocationId = "", selectedDepartment = ""
           .map(
             (row) =>
               `<tr>${headers
-                .map((header) => `<td class="${header === "Color" ? "color-cell" : ""}">${escapeText(row[header])}</td>`)
+                .map((header) =>
+                  header === "Products"
+                    ? `<td>${row[header]}</td>`
+                    : `<td class="${header === "Color" ? "color-cell" : ""}">${escapeText(row[header])}</td>`,
+                )
                 .join("")}</tr>`,
           )
           .join("")}
@@ -680,6 +707,11 @@ function reportDocument(type, selectedLocationId = "", selectedDepartment = "") 
           th, td { border: 1px solid #dce4df; font-size: 12px; padding: 8px; text-align: left; vertical-align: top; }
           th { background: #eef5f3; }
           .color-cell { font-weight: 700; text-transform: uppercase; }
+          .muted { color: #62706b; }
+          .product-color-list { border-collapse: collapse; width: 100%; }
+          .product-color-list td { border: 0; border-bottom: 1px solid #eef2ef; padding: 4px 6px; }
+          .product-color-list tr:last-child td { border-bottom: 0; }
+          .product-color-list td:first-child { width: 68%; }
           .empty { border: 1px solid #dce4df; padding: 14px; }
           @media print { button { display: none; } body { margin: 18px; } }
         </style>
