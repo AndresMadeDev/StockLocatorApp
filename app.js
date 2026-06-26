@@ -90,6 +90,7 @@ const els = {
   locationsManager: document.querySelector("#locationsManager"),
   reportCount: document.querySelector("#reportCount"),
   reportDepartment: document.querySelector("#reportDepartment"),
+  reportLocationArea: document.querySelector("#reportLocationArea"),
   reportLocation: document.querySelector("#reportLocation"),
   reportLocationDepartment: document.querySelector("#reportLocationDepartment"),
   productForm: document.querySelector("#productForm"),
@@ -576,9 +577,9 @@ function escapeText(value) {
   });
 }
 
-function reportTitle(type, selectedLocation = null, selectedDepartment = "") {
+function reportTitle(type, selectedLocation = null, selectedDepartment = "", selectedArea = "") {
   if (type === "locations") {
-    const baseTitle = selectedLocation ? locationLabel(selectedLocation) : "Locations with Products";
+    const baseTitle = selectedLocation ? locationLabel(selectedLocation) : selectedArea ? `${selectedArea} Locations with Products` : "Locations with Products";
     return selectedDepartment ? `${baseTitle} - ${selectedDepartment}` : baseTitle;
   }
   return selectedDepartment ? `${selectedDepartment} Products with Locations` : "Products with Locations";
@@ -611,7 +612,7 @@ function locationReportProducts(locationId, selectedDepartment = "") {
   return sortedProducts().filter((product) => productHasLocation(product, locationId) && productMatchesDepartment(product, selectedDepartment));
 }
 
-function locationReportRows(selectedLocationId = "", selectedDepartment = "") {
+function locationReportRows(selectedLocationId = "", selectedDepartment = "", selectedArea = "") {
   if (selectedLocationId) {
     return locationReportProducts(selectedLocationId, selectedDepartment)
       .map((product) => ({
@@ -621,7 +622,7 @@ function locationReportRows(selectedLocationId = "", selectedDepartment = "") {
   }
 
   return sortedLocations()
-    .filter((location) => !selectedLocationId || location.id === selectedLocationId)
+    .filter((location) => !selectedArea || location.area === selectedArea)
     .filter((location) => !selectedDepartment || locationReportProducts(location.id, selectedDepartment).length)
     .map((location) => {
       const products = locationReportProducts(location.id, selectedDepartment);
@@ -658,8 +659,8 @@ function productColorListHtml(products) {
   `;
 }
 
-function reportRows(type, selectedLocationId = "", selectedDepartment = "") {
-  return type === "locations" ? locationReportRows(selectedLocationId, selectedDepartment) : productReportRows(selectedDepartment);
+function reportRows(type, selectedLocationId = "", selectedDepartment = "", selectedArea = "") {
+  return type === "locations" ? locationReportRows(selectedLocationId, selectedDepartment, selectedArea) : productReportRows(selectedDepartment);
 }
 
 function reportHeaders(type, selectedLocationId = "") {
@@ -670,9 +671,9 @@ function reportHeaders(type, selectedLocationId = "") {
     : ["Department", "Name", "Color", "Size", "Location"];
 }
 
-function buildReportTable(type, selectedLocationId = "", selectedDepartment = "") {
+function buildReportTable(type, selectedLocationId = "", selectedDepartment = "", selectedArea = "") {
   const headers = reportHeaders(type, selectedLocationId);
-  const rows = reportRows(type, selectedLocationId, selectedDepartment);
+  const rows = reportRows(type, selectedLocationId, selectedDepartment, selectedArea);
 
   if (!rows.length) {
     return '<p class="empty">No data to report.</p>';
@@ -701,14 +702,14 @@ function buildReportTable(type, selectedLocationId = "", selectedDepartment = ""
   `;
 }
 
-function reportDocument(type, selectedLocationId = "", selectedDepartment = "") {
+function reportDocument(type, selectedLocationId = "", selectedDepartment = "", selectedArea = "") {
   const selectedLocation = type === "locations" ? findLocation(selectedLocationId) : null;
   const isIndividualLocationReport = Boolean(type === "locations" && selectedLocation);
   return `<!doctype html>
     <html>
       <head>
         <meta charset="UTF-8" />
-        <title>${escapeText(reportTitle(type, selectedLocation, selectedDepartment))}</title>
+        <title>${escapeText(reportTitle(type, selectedLocation, selectedDepartment, selectedArea))}</title>
         <style>
           body { color: #1e2522; font-family: Arial, sans-serif; margin: 28px; }
           h1 { font-size: 24px; margin: 0 0 6px; }
@@ -727,9 +728,9 @@ function reportDocument(type, selectedLocationId = "", selectedDepartment = "") 
         </style>
       </head>
       <body>
-        <h1>${escapeText(reportTitle(type, selectedLocation, selectedDepartment))}</h1>
+        <h1>${escapeText(reportTitle(type, selectedLocation, selectedDepartment, selectedArea))}</h1>
         ${isIndividualLocationReport ? "" : `<div class="meta">Generated ${escapeText(reportDateLabel())}</div>`}
-        ${buildReportTable(type, selectedLocationId, selectedDepartment)}
+        ${buildReportTable(type, selectedLocationId, selectedDepartment, selectedArea)}
       </body>
     </html>`;
 }
@@ -737,6 +738,7 @@ function reportDocument(type, selectedLocationId = "", selectedDepartment = "") 
 function printReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
   const selectedDepartment = type === "locations" ? els.reportLocationDepartment.value : els.reportDepartment.value;
+  const selectedArea = type === "locations" && !selectedLocationId ? els.reportLocationArea.value : "";
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
     alert("Allow pop-ups to print this report.");
@@ -744,7 +746,7 @@ function printReport(type) {
   }
 
   printWindow.document.open();
-  printWindow.document.write(reportDocument(type, selectedLocationId, selectedDepartment));
+  printWindow.document.write(reportDocument(type, selectedLocationId, selectedDepartment, selectedArea));
   printWindow.document.close();
   printWindow.focus();
   setTimeout(() => printWindow.print(), 250);
@@ -753,7 +755,8 @@ function printReport(type) {
 function exportReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
   const selectedDepartment = type === "locations" ? els.reportLocationDepartment.value : els.reportDepartment.value;
-  const blob = new Blob([reportDocument(type, selectedLocationId, selectedDepartment)], {
+  const selectedArea = type === "locations" && !selectedLocationId ? els.reportLocationArea.value : "";
+  const blob = new Blob([reportDocument(type, selectedLocationId, selectedDepartment, selectedArea)], {
     type: "application/vnd.ms-excel;charset=utf-8",
   });
   const url = URL.createObjectURL(blob);
@@ -914,6 +917,15 @@ function renderReportLocationOptions(selectedId = "") {
     );
   });
   els.reportLocation.innerHTML = options.join("");
+}
+
+function renderReportLocationAreaOptions(selectedArea = "") {
+  const areas = uniqueLocationValues("area");
+  const safeArea = areas.includes(selectedArea) ? selectedArea : "";
+  els.reportLocationArea.innerHTML = [
+    '<option value="">All areas</option>',
+    ...areas.map((area) => `<option value="${escapeText(area)}"${area === safeArea ? " selected" : ""}>${escapeText(area)}</option>`),
+  ].join("");
 }
 
 function renderManageLocationFilters() {
@@ -1080,6 +1092,7 @@ function render() {
   els.inventoryCount.textContent = `${state.products.length} item${state.products.length === 1 ? "" : "s"}`;
   els.reportCount.textContent = `${state.products.length} products / ${state.locations.length} locations`;
   renderLocationOptions(getSelectedProductLocationIds());
+  renderReportLocationAreaOptions(els.reportLocationArea.value);
   renderReportLocationOptions(els.reportLocation.value);
   renderManageLocationFilters();
   renderSearchResults();
@@ -1504,6 +1517,16 @@ els.clearLocationFilters.addEventListener("click", () => {
   els.manageLocationSort.value = "area";
   renderManageLocationFilters();
   renderLocations();
+});
+els.reportLocationArea.addEventListener("change", () => {
+  els.reportLocation.value = "";
+  renderReportLocationAreaOptions(els.reportLocationArea.value);
+});
+els.reportLocation.addEventListener("change", () => {
+  if (els.reportLocation.value) {
+    els.reportLocationArea.value = "";
+    renderReportLocationAreaOptions();
+  }
 });
 els.closeLocationProductDialog.addEventListener("click", closeLocationProductDialog);
 els.cancelLocationProductDialog.addEventListener("click", closeLocationProductDialog);
