@@ -91,6 +91,7 @@ const els = {
   reportCount: document.querySelector("#reportCount"),
   reportDepartment: document.querySelector("#reportDepartment"),
   reportLocation: document.querySelector("#reportLocation"),
+  reportLocationDepartment: document.querySelector("#reportLocationDepartment"),
   productForm: document.querySelector("#productForm"),
   productId: document.querySelector("#productId"),
   productName: document.querySelector("#productName"),
@@ -577,7 +578,8 @@ function escapeText(value) {
 
 function reportTitle(type, selectedLocation = null, selectedDepartment = "") {
   if (type === "locations") {
-    return selectedLocation ? locationLabel(selectedLocation) : "Locations with Products";
+    const baseTitle = selectedLocation ? locationLabel(selectedLocation) : "Locations with Products";
+    return selectedDepartment ? `${baseTitle} - ${selectedDepartment}` : baseTitle;
   }
   return selectedDepartment ? `${selectedDepartment} Products with Locations` : "Products with Locations";
 }
@@ -601,10 +603,17 @@ function productReportRows(selectedDepartment = "") {
     });
 }
 
-function locationReportRows(selectedLocationId = "") {
+function productMatchesDepartment(product, selectedDepartment = "") {
+  return !selectedDepartment || product.department === selectedDepartment;
+}
+
+function locationReportProducts(locationId, selectedDepartment = "") {
+  return sortedProducts().filter((product) => productHasLocation(product, locationId) && productMatchesDepartment(product, selectedDepartment));
+}
+
+function locationReportRows(selectedLocationId = "", selectedDepartment = "") {
   if (selectedLocationId) {
-    return sortedProducts()
-      .filter((product) => productHasLocation(product, selectedLocationId))
+    return locationReportProducts(selectedLocationId, selectedDepartment)
       .map((product) => ({
         Name: product.name,
         Color: formatColor(product.color),
@@ -613,8 +622,9 @@ function locationReportRows(selectedLocationId = "") {
 
   return sortedLocations()
     .filter((location) => !selectedLocationId || location.id === selectedLocationId)
+    .filter((location) => !selectedDepartment || locationReportProducts(location.id, selectedDepartment).length)
     .map((location) => {
-      const products = sortedProducts().filter((product) => productHasLocation(product, location.id));
+      const products = locationReportProducts(location.id, selectedDepartment);
       return {
         Area: location.area,
         Section: location.section,
@@ -649,7 +659,7 @@ function productColorListHtml(products) {
 }
 
 function reportRows(type, selectedLocationId = "", selectedDepartment = "") {
-  return type === "locations" ? locationReportRows(selectedLocationId) : productReportRows(selectedDepartment);
+  return type === "locations" ? locationReportRows(selectedLocationId, selectedDepartment) : productReportRows(selectedDepartment);
 }
 
 function reportHeaders(type, selectedLocationId = "") {
@@ -726,7 +736,7 @@ function reportDocument(type, selectedLocationId = "", selectedDepartment = "") 
 
 function printReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
-  const selectedDepartment = type === "products" ? els.reportDepartment.value : "";
+  const selectedDepartment = type === "locations" ? els.reportLocationDepartment.value : els.reportDepartment.value;
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
     alert("Allow pop-ups to print this report.");
@@ -742,7 +752,7 @@ function printReport(type) {
 
 function exportReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
-  const selectedDepartment = type === "products" ? els.reportDepartment.value : "";
+  const selectedDepartment = type === "locations" ? els.reportLocationDepartment.value : els.reportDepartment.value;
   const blob = new Blob([reportDocument(type, selectedLocationId, selectedDepartment)], {
     type: "application/vnd.ms-excel;charset=utf-8",
   });
