@@ -738,7 +738,7 @@ function reportDocument(type, selectedLocationId = "", selectedDepartment = "", 
 function printReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
   const selectedDepartment = type === "locations" ? "" : els.reportDepartment.value;
-  const selectedArea = type === "locations" && !selectedLocationId ? els.reportLocationArea.value : "";
+  const selectedArea = type === "locations" && !selectedLocationId ? (els.reportLocationArea ? els.reportLocationArea.value : "") : "";
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
     alert("Allow pop-ups to print this report.");
@@ -755,7 +755,7 @@ function printReport(type) {
 function exportReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
   const selectedDepartment = type === "locations" ? "" : els.reportDepartment.value;
-  const selectedArea = type === "locations" && !selectedLocationId ? els.reportLocationArea.value : "";
+  const selectedArea = type === "locations" && !selectedLocationId ? (els.reportLocationArea ? els.reportLocationArea.value : "") : "";
   const blob = new Blob([reportDocument(type, selectedLocationId, selectedDepartment, selectedArea)], {
     type: "application/vnd.ms-excel;charset=utf-8",
   });
