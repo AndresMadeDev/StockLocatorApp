@@ -608,6 +608,18 @@ function productMatchesDepartment(product, selectedDepartment = "") {
   return !selectedDepartment || product.department === selectedDepartment;
 }
 
+function departmentAbbreviation(department) {
+  const normalizedDepartment = normalizeDepartment(department);
+  const abbreviations = {
+    Woman: "W",
+    "Men's": "M",
+    Kids: "K",
+    Toddler: "T",
+    "Accessories / Apparel": "A/A",
+  };
+  return abbreviations[normalizedDepartment] || "";
+}
+
 function locationReportProducts(locationId, selectedDepartment = "") {
   return sortedProducts().filter((product) => productHasLocation(product, locationId) && productMatchesDepartment(product, selectedDepartment));
 }
@@ -630,7 +642,6 @@ function locationReportRows(selectedLocationId = "", selectedDepartment = "", se
         Area: location.area,
         Section: location.section,
         Number: location.number,
-        Location: locationLabel(location),
         Products: productColorListHtml(products),
       };
     });
@@ -648,7 +659,7 @@ function productColorListHtml(products) {
           .map(
             (product) => `
               <tr>
-                <td>${escapeText(product.name)}</td>
+                <td>${escapeText([product.name, departmentAbbreviation(product.department)].filter(Boolean).join(" - "))}</td>
                 <td class="color-cell">${escapeText(formatColor(product.color))}</td>
               </tr>
             `,
@@ -667,7 +678,7 @@ function reportHeaders(type, selectedLocationId = "") {
   return type === "locations" && selectedLocationId
     ? ["Name", "Color"]
     : type === "locations"
-    ? ["Area", "Section", "Number", "Location", "Products"]
+    ? ["Area", "Section", "Number", "Products"]
     : ["Department", "Name", "Color", "Size", "Location"];
 }
 
