@@ -92,7 +92,6 @@ const els = {
   reportDepartment: document.querySelector("#reportDepartment"),
   reportLocationArea: document.querySelector("#reportLocationArea"),
   reportLocation: document.querySelector("#reportLocation"),
-  reportLocationDepartment: document.querySelector("#reportLocationDepartment"),
   productForm: document.querySelector("#productForm"),
   productId: document.querySelector("#productId"),
   productName: document.querySelector("#productName"),
@@ -537,11 +536,12 @@ function sortLocationsForManage(locations) {
 }
 
 function uniqueLocationValues(field, areaFilter = "") {
+  const safeAreaFilter = String(areaFilter || "").trim();
   return [
     ...new Set(
       state.locations
-        .filter((location) => !areaFilter || location.area === areaFilter)
-        .map((location) => location[field])
+        .filter((location) => !safeAreaFilter || String(location.area || "").trim() === safeAreaFilter)
+        .map((location) => String(location[field] || "").trim())
         .filter(Boolean),
     ),
   ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
@@ -737,7 +737,7 @@ function reportDocument(type, selectedLocationId = "", selectedDepartment = "", 
 
 function printReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
-  const selectedDepartment = type === "locations" ? els.reportLocationDepartment.value : els.reportDepartment.value;
+  const selectedDepartment = type === "locations" ? "" : els.reportDepartment.value;
   const selectedArea = type === "locations" && !selectedLocationId ? els.reportLocationArea.value : "";
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
@@ -754,7 +754,7 @@ function printReport(type) {
 
 function exportReport(type) {
   const selectedLocationId = type === "locations" ? els.reportLocation.value : "";
-  const selectedDepartment = type === "locations" ? els.reportLocationDepartment.value : els.reportDepartment.value;
+  const selectedDepartment = type === "locations" ? "" : els.reportDepartment.value;
   const selectedArea = type === "locations" && !selectedLocationId ? els.reportLocationArea.value : "";
   const blob = new Blob([reportDocument(type, selectedLocationId, selectedDepartment, selectedArea)], {
     type: "application/vnd.ms-excel;charset=utf-8",
@@ -906,10 +906,12 @@ function locationProducts(locationId) {
   return sortedProducts().filter((product) => productHasLocation(product, locationId));
 }
 
-function renderReportLocationOptions(selectedId = "") {
-  const selectedLocationId = state.locations.some((location) => location.id === selectedId) ? selectedId : "";
+function renderReportLocationOptions(selectedId = "", selectedArea = "") {
+  const safeArea = String(selectedArea || "").trim();
+  const reportLocations = sortedLocations().filter((location) => !safeArea || String(location.area || "").trim() === safeArea);
+  const selectedLocationId = reportLocations.some((location) => location.id === selectedId) ? selectedId : "";
   const options = ['<option value="">All locations</option>'];
-  sortedLocations().forEach((location) => {
+  reportLocations.forEach((location) => {
     options.push(
       `<option value="${escapeText(location.id)}"${location.id === selectedLocationId ? " selected" : ""}>${escapeText(
         locationLabel(location),
@@ -921,7 +923,7 @@ function renderReportLocationOptions(selectedId = "") {
 
 function renderReportLocationAreaOptions(selectedArea = "") {
   const areas = uniqueLocationValues("area");
-  const safeArea = areas.includes(selectedArea) ? selectedArea : "";
+  const safeArea = areas.includes(String(selectedArea || "").trim()) ? String(selectedArea || "").trim() : "";
   els.reportLocationArea.innerHTML = [
     '<option value="">All areas</option>',
     ...areas.map((area) => `<option value="${escapeText(area)}"${area === safeArea ? " selected" : ""}>${escapeText(area)}</option>`),
@@ -1093,7 +1095,7 @@ function render() {
   els.reportCount.textContent = `${state.products.length} products / ${state.locations.length} locations`;
   renderLocationOptions(getSelectedProductLocationIds());
   renderReportLocationAreaOptions(els.reportLocationArea.value);
-  renderReportLocationOptions(els.reportLocation.value);
+  renderReportLocationOptions(els.reportLocation.value, els.reportLocationArea.value);
   renderManageLocationFilters();
   renderSearchResults();
   renderProducts();
@@ -1521,11 +1523,13 @@ els.clearLocationFilters.addEventListener("click", () => {
 els.reportLocationArea.addEventListener("change", () => {
   els.reportLocation.value = "";
   renderReportLocationAreaOptions(els.reportLocationArea.value);
+  renderReportLocationOptions("", els.reportLocationArea.value);
 });
 els.reportLocation.addEventListener("change", () => {
   if (els.reportLocation.value) {
     els.reportLocationArea.value = "";
     renderReportLocationAreaOptions();
+    renderReportLocationOptions(els.reportLocation.value);
   }
 });
 els.closeLocationProductDialog.addEventListener("click", closeLocationProductDialog);
