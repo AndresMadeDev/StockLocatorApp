@@ -1143,7 +1143,6 @@ function renderLocationDetailProducts() {
           </div>
           <div class="card-actions location-product-actions">
             <button class="text-button" type="button" data-edit-product="${escapeText(product.id)}">Edit</button>
-            <button class="danger-button" type="button" data-remove-from-location="${escapeText(product.id)}">Remove</button>
             <button class="danger-button" type="button" data-delete-product="${escapeText(product.id)}">Delete</button>
           </div>
         </article>
