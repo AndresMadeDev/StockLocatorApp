@@ -917,6 +917,23 @@ function locationProducts(locationId) {
   return sortedProducts().filter((product) => productHasLocation(product, locationId));
 }
 
+function locationProductSummaryHtml(products) {
+  if (!products.length) {
+    return "Empty location";
+  }
+
+  return products
+    .map(
+      (product) => `
+        <span class="location-product-chip" style="${departmentStyle(product.department)}">
+          <span class="location-product-abbr">${escapeText(departmentAbbreviation(product.department))}</span>
+          <span>${escapeText(product.name)}</span>
+        </span>
+      `,
+    )
+    .join("");
+}
+
 function renderReportLocationOptions(selectedId = "", selectedArea = "") {
   const safeArea = String(selectedArea || "").trim();
   const reportLocations = sortedLocations().filter((location) => !safeArea || String(location.area || "").trim() === safeArea);
@@ -1085,9 +1102,7 @@ function renderLocations() {
           <div class="card-top">
             <div>
               <div class="card-title">${escapeText(locationLabel(location))}</div>
-              <div class="meta-line">${escapeText(
-                products.length ? products.map((product) => product.name).join(", ") : "Empty location",
-              )}</div>
+              <div class="meta-line location-product-summary">${locationProductSummaryHtml(products)}</div>
             </div>
             <span class="location-badge">${productCount} product${productCount === 1 ? "" : "s"}</span>
           </div>

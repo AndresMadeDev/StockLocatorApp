@@ -529,6 +529,24 @@ select:focus {
   line-height: 1.35;
 }
 
+.location-product-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.location-product-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.location-product-abbr {
+  color: var(--department-color, var(--primary));
+  font-weight: 900;
+}
+
 .location-badge {
   align-self: flex-start;
   border-radius: 999px;
