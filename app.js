@@ -928,6 +928,7 @@ function locationProductSummaryHtml(products) {
         <span class="location-product-chip" style="${departmentStyle(product.department)}">
           <span class="location-product-abbr">${escapeText(departmentAbbreviation(product.department))}</span>
           <span>${escapeText(product.name)}</span>
+          <span class="location-product-color">${escapeText(formatColor(product.color))}</span>
         </span>
       `,
     )

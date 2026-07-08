@@ -547,6 +547,12 @@ select:focus {
   font-weight: 900;
 }
 
+.location-product-color {
+  color: var(--text);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .location-badge {
   align-self: flex-start;
   border-radius: 999px;
