@@ -530,16 +530,21 @@ select:focus {
 }
 
 .location-product-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
 }
 
 .location-product-chip {
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
+  min-width: 0;
   color: var(--muted);
+}
+
+.location-product-chip span:nth-child(2) {
+  overflow-wrap: anywhere;
 }
 
 .location-product-abbr {
